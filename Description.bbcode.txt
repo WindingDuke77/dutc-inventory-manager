@@ -1,0 +1,95 @@
+﻿[h1]DUTC INVENTORY[/h1]
+One script runs your whole base. Sorting, autocrafting, refinery feeding, bottle refilling, ice + uranium balancing and modern sprite-drawn LCDs - in a third of the code of the classics, and fully backward compatible with Isy's Inventory Manager setups.
+
+[h1]Features[/h1]
+[list]
+[*][b]Item sorting[/b] - everything routes into type containers: Ores / Ingots / Components / Tools / Ammo / Bottles / Food
+[*][b]Food category[/b] - vanilla food, ingredients and seeds get their own containers; modded bottle-type items (powerbanks, shields, paint guns) no longer cycle through tanks
+[*][b]Even container balancing[/b] - items split equally across same-type containers (9 tools / 3 boxes = 3 each)
+[*][b]Turret ammo loading[/b] - every turret and fixed gun kept stocked, subgrids and docked ships included
+[*][b]Auto container assignment[/b] - type full or missing? Biggest free cargo gets tagged automatically
+[*][b]Bottle refilling that works[/b] - bottles route through tanks with gas, and bottles already stored get topped up too
+[*][b]Autocrafting[/b] - wanted amounts live in the LCD's Custom Data (prefilled with every craftable item). Colored status screen: green = stocked, amber = crafting, red = low
+[*][b]Refinery management[/b] - auto-fed by ore priority (Stone first by default), ore balanced evenly across refineries, priority ore moved to the front of the queue
+[*][b]Assembler feeding[/b] - queued assemblers get pre-stocked with the exact ingots their queue needs
+[*][b]Ice balancing[/b] - even split across O2/H2 generators, with space reserved for bottles
+[*][b]Uranium balancing[/b] - fixed amount per reactor (100 large / 25 small), conveyors auto-managed
+[*][b]Assembler cleanup[/b] - idle assemblers get emptied back into cargo
+[*][b]Sprite LCDs[/b] - dark flat UI with colored bars on every screen, auto-scrolling when content overflows
+[*][b]Special containers[/b] - per-container loadouts with Normal / Minimum / Limiter / All modes
+[*][b]Performance friendly[/b] - work is spread over 11 small steps, transfers capped per tick
+[/list]
+
+[h1]Setup[/h1]
+[olist]
+[*]Paste the script into a Programmable Block. It runs by itself - no timer, no arguments.
+[*]Name cargo containers with a type word (Ores / Ingots / Components / Tools / Ammo / Bottles / Food) - or build cargo and let the script assign them.
+[*]Add LCD tags to any LCD or cockpit name (see below).
+[*]Done. Everything else is automatic.
+[/olist]
+
+[h1]LCD Screens[/h1]
+Add the tag to any LCD or cockpit name:
+[list]
+[*][b]DUTC-main[/b] - status overview: fill bars per type, machine counts, queue, warnings, recent actions
+[*][b]DUTC-inv[/b] - item lists with bars. Filters go in the LCD's Custom Data (Component / Ingot / SteelPlate / regex...)
+[*][b]DUTC-warn[/b] - numbered warnings
+[*][b]DUTC-act[/b] - timestamped log of every item moved
+[*][b]Autocrafting[/b] - crafting status screen; edit wanted amounts in its Custom Data
+[/list]
+Cockpit screens: [b]DUTC-main:0[/b] = first screen, [b]:1[/b] = second, etc.
+
+[h1]Autocrafting[/h1]
+The Autocrafting LCD's Custom Data is your shopping list - prefilled automatically:
+[code]SteelPlate=15000P
+Construction=5000
+Motor=1500[/code]
+Modifiers: [b]P[/b] = craft first (priority), [b]I[/b] = ignore item.
+Stubborn modded item? Force its blueprint: [code]SomeModItem=100 BP:BlueprintSubtype[/code]
+[b][NoBP][/b] on screen = no assembler can craft that item (modded or not craftable).
+Deep blueprint searching only runs for items with a wanted amount above zero - uncraftable loot sitting in cargo costs nothing.
+
+[h1]Keywords[/h1]
+[list]
+[*][b]Special[/b] - loadout container (edit its Custom Data, IIM modes supported: 100 / 100M / 100L / All)
+[*][b]Locked[/b] - script never touches it
+[*][b]Hidden[/b] - not counted, not displayed, left out of sorting
+[*][b]!manual[/b] - machine excluded from management
+[*][b][No Sorting][/b] / [b][No IIM][/b] on a connector - docked ship is left alone
+[/list]
+
+[h1]Plays Nice With Everything[/h1]
+[list]
+[*][b]Build Planner works remotely[/b] - the script never cancels queue entries it didn't create, so planner orders survive, get their ingots fed, and Withdraw picks components up from storage at any access point
+[*][b]Nanobot Build & Repair[/b] - BaR blocks are auto-detected and fully hands-off: their inventories and assembler queues are never touched
+[*][b]Multiple instances[/b] - a base and a docked ship can each run this script; they elect one active manager (station beats ship), the other keeps its screens and machine refills
+[/list]
+
+[h1]Isy's IIM Compatible[/h1]
+Swap the script into an existing Isy's setup - nothing to rename:
+[list]
+[*]Same container, Special, Locked, Hidden and !manual keywords
+[*]IIM LCD tags work: IIM-main, IIM-inventory (incl. @0 sections), IIM-warnings, IIM-actions
+[*]IIM special container syntax works (Component/SteelPlate=100, M/L/All modes)
+[*]Old autocrafting wanted amounts get migrated automatically
+[/list]
+
+[h1]Arguments (optional)[/h1]
+[list]
+[*][b]pause[/b] / [b]resume[/b] - stop / restart the script
+[*][b]reset[/b] - clear blueprint caches (run after adding new assemblers)
+[/list]
+
+[h1]Requirements[/h1]
+[list]
+[*]Experimental mode ON + in-game scripts enabled in world settings
+[*]One Programmable Block, conveyor-connected cargo
+[*]No mods required - vanilla + DLC supported
+[/list]
+
+[h1]Configuration[/h1]
+All settings sit in a readable config header at the top of the script: keywords, thresholds, ore refining priority, uranium amounts, ice bottle reserve, docked-grid behavior, storage white/blacklists, UI scale and more. Every option is commented.
+
+
+
+
