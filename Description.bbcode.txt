@@ -1,6 +1,10 @@
 ﻿[h1]DUTC INVENTORY[/h1]
 One script runs your whole base. Sorting, autocrafting, refinery feeding, bottle refilling, ice + uranium balancing and modern sprite-drawn LCDs - in a third of the code of the classics, and fully backward compatible with Isy's Inventory Manager setups.
 
+[h1]Source Code[/h1]
+Full commented source, module layout and build script: [url=https://github.com/WindingDuke77/dutc-inventory-manager]github.com/WindingDuke77/dutc-inventory-manager[/url]
+Issues and pull requests welcome - most fixes in this script came from the community.
+
 [h1]Features[/h1]
 [list]
 [*][b]Item sorting[/b] - everything routes into type containers: Ores / Ingots / Components / Tools / Ammo / Bottles / Food
@@ -89,6 +93,7 @@ Swap the script into an existing Isy's setup - nothing to rename:
 
 [h1]Configuration[/h1]
 All settings sit in a readable config header at the top of the script: keywords, thresholds, ore refining priority, uranium amounts, ice bottle reserve, docked-grid behavior, storage white/blacklists, UI scale and more. Every option is commented.
+
 
 
 
