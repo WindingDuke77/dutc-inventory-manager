@@ -19,7 +19,7 @@ int Cat(MyItemType t)
 bool IsCat(IMyTerminalBlock b, int c) { return cats[c].Contains(b); }
 
 // any ice-type ore, modded included: FilteredIce, AlienLakeIce... (thanks aantono)
-bool IsIce(MyItemType t) { return t.TypeId.EndsWith("_Ore") && t.SubtypeId.Contains("Ice"); }
+bool IsIce(MyItemType t) { return t.TypeId.EndsWith("_Ore") && t.SubtypeId.IndexOf("Ice", StringComparison.OrdinalIgnoreCase) >= 0; }
 
 bool MatchList(IMyTerminalBlock b, string[] list)
 {

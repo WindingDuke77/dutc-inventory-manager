@@ -1,5 +1,5 @@
 ﻿// ========================================
-//         DUTC INVENTORY  v2.0.3
+//         DUTC INVENTORY  v2.0.4
 // ========================================
 // Sorting + even container balancing, auto container assignment, bottle filling
 // (works!), special loadout containers, autocrafting via Custom Data with sprite
@@ -870,20 +870,27 @@ int BpState(string name, out MyDefinitionId bp, bool deep)
     string typePrefix = "";
     int slash = name.IndexOf('/');
     if (slash > 0) { typePrefix = name.Substring(0, slash); core = name.Substring(slash + 1); }
+    bool isSeed = typePrefix == "SeedItem" || typePrefix == "Seed" || typePrefix == "Seeds";
     string baseN = core.Replace("Item", "");
     int lastUnder = baseN.LastIndexOf('_');
     string trimmed = lastUnder > 0 ? baseN.Substring(0, lastUnder) : baseN;
     var candidates = new HashSet<string>();
-    if (typePrefix == "SeedItem") { candidates.Add("Seeds_" + core); candidates.Add("Seed_" + core); candidates.Add("Spores_" + core); }
+    if (isSeed)
+    {
+        candidates.Add("Seeds_" + core); candidates.Add("Seed_" + core); candidates.Add("Spores_" + core);
+        candidates.Add("Seeds_" + baseN); candidates.Add("Spores_" + baseN);
+        candidates.Add(core + "_Seed"); candidates.Add(core + "_Seeds");
+    }
     if (typePrefix != "") candidates.Add(typePrefix + "_" + core);
     candidates.Add(core); candidates.Add(baseN); candidates.Add(trimmed);
     candidates.Add(core + "Component"); candidates.Add(baseN + "Component");
     candidates.Add(core + "Magazine"); candidates.Add(baseN + "Magazine");
-    candidates.Add(core + "_ApexSurvivalAdditions");
+    candidates.Add(core + "Item"); candidates.Add(baseN + "Item");
+    candidates.Add(core + "_ApexSurvivalAdditions"); candidates.Add(baseN + "_ApexSurvivalAdditions");
     foreach (var s in candidates)
         if (TestBp(s, out bp)) { bpCache[name] = bp; return 1; }
     if (!deep) return 0;
-    if (probeBudget <= 0) return 0;
+    if (probeBudget <= 0 || Runtime.CurrentInstructionCount > 28000) return 0;
     probeBudget--;
     var candList = new List<string>(candidates);
     int pos; probePos.TryGetValue(name, out pos);
@@ -1509,7 +1516,7 @@ int Cat(MyItemType t)
     return -1;
 }
 bool IsCat(IMyTerminalBlock b, int c) { return cats[c].Contains(b); }
-bool IsIce(MyItemType t) { return t.TypeId.EndsWith("_Ore") && t.SubtypeId.Contains("Ice"); }
+bool IsIce(MyItemType t) { return t.TypeId.EndsWith("_Ore") && t.SubtypeId.IndexOf("Ice", StringComparison.OrdinalIgnoreCase) >= 0; }
 bool MatchList(IMyTerminalBlock b, string[] list)
 {
     foreach (var s in list)
