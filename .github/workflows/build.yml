@@ -1,0 +1,47 @@
+name: Build
+
+on:
+  push:
+    branches: ["main"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the paste file
+        shell: pwsh
+        run: ./build.ps1
+
+      - name: Sanity check
+        shell: pwsh
+        run: |
+          $raw = Get-Content DutcInventory_paste.cs -Raw
+          if ($raw.Length -gt 100000) { throw "Too big for the Programmable Block: $($raw.Length) chars" }
+          $o = ($raw.ToCharArray() | Where-Object { $_ -eq '{' }).Count
+          $c = ($raw.ToCharArray() | Where-Object { $_ -eq '}' }).Count
+          if ($o -ne $c) { throw "Unbalanced braces: $o open / $c close" }
+          Write-Host "OK: $($raw.Length) chars, braces $o/$c"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DutcInventory_paste
+          path: DutcInventory_paste.cs
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create "${{ github.ref_name }}" DutcInventory_paste.cs
+          --title "DUTC Inventory ${{ github.ref_name }}"
+          --notes "Built automatically from src/. Download DutcInventory_paste.cs and paste it into your Programmable Block, or subscribe on the [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3789969690)."
+          --verify-tag

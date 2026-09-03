@@ -38,7 +38,14 @@ Inventory Manager setups and safe alongside Nanobot Build & Repair.
 | `build.bat` | Double-click wrapper for `build.ps1` |
 | `Description.bbcode.txt` | Master copy of the Steam Workshop description |
 
-## Building
+## Getting the script
+
+**Easiest:** grab the ready-built `DutcInventory_paste.cs` from the
+[latest Release](https://github.com/WindingDuke77/dutc-inventory-manager/releases/latest)
+— CI builds and attaches it automatically for every version tag — or subscribe
+on the Workshop.
+
+## Building yourself
 
 Run `build.bat` (or `powershell -ExecutionPolicy Bypass -File build.ps1`).
 
