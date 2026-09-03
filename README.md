@@ -35,18 +35,19 @@ Inventory Manager setups and safe alongside Nanobot Build & Repair.
 | `src/06_screens.cs` | Sprite LCD rendering |
 | `src/07_helpers.cs` | Shared helpers (transfer engine, caches, classification) |
 | `build.ps1` | Merges the modules into `DutcInventory_paste.cs` (comment-stripped, config kept) |
-| `DutcInventory_paste.cs` | The built file — paste this into the Programmable Block |
+| `build.bat` | Double-click wrapper for `build.ps1` |
 | `Description.bbcode.txt` | Master copy of the Steam Workshop description |
 
 ## Building
 
-```powershell
-powershell -ExecutionPolicy Bypass -File build.ps1
-```
+Run `build.bat` (or `powershell -ExecutionPolicy Bypass -File build.ps1`).
 
 Merges `src/*.cs` in filename order, strips comments outside the config module,
-checks the 100k character PB limit and brace balance, and copies the result to
-your clipboard.
+checks the 100k character PB limit and brace balance, writes
+`DutcInventory_paste.cs` (git-ignored) and copies the result to your clipboard —
+paste that into the Programmable Block. Prefer not to build? The
+[Workshop item](https://steamcommunity.com/sharedfiles/filedetails/?id=3789969690)
+always carries the latest built script.
 
 Scripts are C# 6 (the Programmable Block compiler): no local functions, no
 pattern matching, no `?.` on game interfaces you don't control. Final compile
