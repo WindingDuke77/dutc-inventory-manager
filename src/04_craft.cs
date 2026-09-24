@@ -10,7 +10,9 @@ Dictionary<MyDefinitionId,double> ourQueued = new Dictionary<MyDefinitionId,doub
 // community-confirmed blueprint names no pattern can guess (thanks aantono)
 Dictionary<string,string> knownBp = new Dictionary<string,string>
 {
-    { "AQD_Comp_Concrete", "AQD_BP_StoneIngot_To_Concrete" }
+    { "AQD_Comp_Concrete", "AQD_BP_StoneIngot_To_Concrete" },
+    { "DeuteriumContainmentUnit", "IceToDeuterium" },             // Star Trek Mod Pack (thanks Jasper + aantono)
+    { "AntideuteriumContainmentUnit", "IceToAntideuterium" }
 };
 // per-name sweep progress: interrupted scans RESUME instead of restarting, so
 // uncraftable items (Fruit...) always reach a final NoBP verdict (thanks Oxnard)
@@ -25,6 +27,7 @@ class CRow
     public double want;
     public int state;   // 0 = normal, -1 = NoBP, -2 = ignored, -3 = still checking
     public double inQ;
+    public double disQ;
 }
 List<CRow> craftRows = new List<CRow>();
 
@@ -33,10 +36,23 @@ bool Craft()
     if (!enableAutocrafting || craftLCDs.Count == 0) return true;
     if (assemblers.Count == 0) { Warn("Autocrafting: no usable assemblers!"); return true; }
     probeBudget = 1;
+    // quick-probe misses are re-checked occasionally (a new assembler type may
+    // have arrived), not every cycle - modded junk items stay cheap (thanks EBALL360)
+    if (cycles % 300 == 0) quickMiss.Clear();
+    // assemblers we flipped to disassembly go back to assembly once they finish
+    if (ourDisAsm.Count > 0)
+    {
+        var doneD = new List<long>();
+        foreach (var a in assemblers)
+            if (ourDisAsm.Contains(a.EntityId) && a.Mode == MyAssemblerMode.Disassembly && a.IsQueueEmpty)
+            { a.Mode = MyAssemblerMode.Assembly; doneD.Add(a.EntityId); }
+        foreach (var id in doneD) ourDisAsm.Remove(id);
+    }
     queued.Clear();
     var q = new List<MyProductionItem>();
     foreach (var a in assemblers)
     {
+        if (a.Mode == MyAssemblerMode.Disassembly) continue;
         q.Clear();
         try { a.GetQueue(q); } catch { continue; }
         foreach (var pi in q)
@@ -85,8 +101,10 @@ bool Craft()
         var t = kv.Key;
         if (!t.TypeId.EndsWith("_Component") && !t.TypeId.EndsWith("_AmmoMagazine") && Cat(t) != FOOD && !t.TypeId.EndsWith("_PhysicalGunObject") && !t.TypeId.EndsWith("_PhysicalObject")) continue;
         if (seen.Contains(t.SubtypeId)) continue;
+        if (quickMiss.Contains(t.SubtypeId)) continue;
         MyDefinitionId bp0;
-        if (BpState(t.SubtypeId, out bp0, false) != 1) continue;
+        int st0 = BpState(t.SubtypeId, out bp0, false);
+        if (st0 != 1) { if (st0 == 0) quickMiss.Add(t.SubtypeId); continue; }
         seen.Add(t.SubtypeId);
         entries.Add(new[] { t.SubtypeId, "0", "", "" });
         newLines.Append(t.SubtypeId + "=0\n");
@@ -136,7 +154,19 @@ bool Craft()
             inQ = Math.Max(0, inQ - removed);
             queued[bp] = inQ;
         }
-        craftRows.Add(new CRow { name = name, cur = cur, want = want, state = 0, inQ = inQ });
+        // D modifier: melt the surplus back down (thanks PriorityZer0 + aantono)
+        double disQ = 0;
+        if (allowDisassembly && mods.Contains("D") && want > 0)
+        {
+            disQ = DisQueueOf(bp);
+            if (cur > want * (1 + craftMargin))
+            {
+                double excess = cur - want - disQ;
+                if (excess >= 1) disQ += QueueDis(bp, Math.Min(excess, 500), name);
+            }
+            else if (disQ > 0 && cur <= want) { CancelDis(bp); disQ = 0; }
+        }
+        craftRows.Add(new CRow { name = name, cur = cur, want = want, state = 0, inQ = inQ, disQ = disQ });
     }
     DrawCraftScreens();
     return true;
@@ -150,6 +180,7 @@ void SetupCraftCD()
     sbcd.Append(CRAFT_MARKER + "\n");
     sbcd.Append("# Edit the number = wanted stock. The screen only displays status.\n");
     sbcd.Append("# Modifiers after the number:  P = craft first (priority),  I = ignore\n");
+    sbcd.Append("#   D = disassemble the excess above the wanted amount (e.g. SteelPlate=1000D)\n");
     sbcd.Append("# Modded item stuck on NoBP? Force its blueprint: Name=100 BP:BlueprintSubtype\n");
     sbcd.Append("# New craftable items get added here automatically.\n");
     var have = new HashSet<string>();
@@ -170,7 +201,7 @@ void SetupCraftCD()
             if (wantTok == null) continue;
             double w;
             double.TryParse(System.Text.RegularExpressions.Regex.Match(wantTok, @"\d+").Value, out w);
-            string mods = System.Text.RegularExpressions.Regex.Replace(wantTok, @"[\d\.]", "").ToUpper().Replace("A", "").Replace("D", "").Replace("H", "");
+            string mods = System.Text.RegularExpressions.Regex.Replace(wantTok, @"[\d\.]", "").ToUpper().Replace("A", "").Replace("H", "");
             if (have.Contains(tok[0])) continue;
             have.Add(tok[0]);
             sbcd.Append(tok[0] + "=" + Math.Round(w) + mods + "\n");
@@ -255,8 +286,8 @@ int DrawCraftPanel(IMyTextSurface s, int index, int start, bool last)
         else
         {
             frac = r.want > 0 ? Math.Min(1, r.cur / r.want) : -1;
-            col = r.want <= 0 ? UI_DIM : r.cur >= r.want * (1 - craftMargin) ? UI_GOOD : r.inQ > 0 ? UI_WARNC : UI_BAD;
-            valTxt = Num(r.cur) + " / " + Num(r.want) + (r.inQ > 0 ? " +" + Math.Round(r.inQ) : "");
+            col = r.want <= 0 ? UI_DIM : r.cur >= r.want * (1 - craftMargin) ? (r.disQ > 0 ? UI_WARNC : UI_GOOD) : r.inQ > 0 ? UI_WARNC : UI_BAD;
+            valTxt = Num(r.cur) + " / " + Num(r.want) + (r.inQ > 0 ? " +" + Math.Round(r.inQ) : "") + (r.disQ > 0 ? " -" + Math.Round(r.disQ) : "");
         }
         f.Add(Txt(TruncS(r.name, maxChars), off + new Vector2(W * 0.05f, y), 0.6f * sc, UI_TEXT, TextAlignment.LEFT));
         f.Add(Txt(valTxt, off + new Vector2(W * 0.70f, y), 0.55f * sc, col, TextAlignment.RIGHT));
@@ -268,6 +299,68 @@ int DrawCraftPanel(IMyTextSurface s, int index, int start, bool last)
     return last ? Math.Max(0, total - start) : maxRows;
 }
 
+// total amount of bp sitting in disassembly-mode queues
+double DisQueueOf(MyDefinitionId bp)
+{
+    double tot = 0;
+    var q = new List<MyProductionItem>();
+    foreach (var a in assemblers)
+    {
+        if (a.Mode != MyAssemblerMode.Disassembly) continue;
+        q.Clear();
+        try { a.GetQueue(q); } catch { continue; }
+        foreach (var pi in q) if (pi.BlueprintId == bp) tot += (double)pi.Amount;
+    }
+    return tot;
+}
+
+// queue a disassembly job: reuse an assembler already in disassembly mode, else
+// borrow ONE idle assembler (flipped back to assembly the moment it finishes)
+double QueueDis(MyDefinitionId bp, double amount, string name)
+{
+    IMyAssembler pick = null;
+    foreach (var a in assemblers)
+    {
+        if (a.Mode != MyAssemblerMode.Disassembly) continue;
+        bool can; try { can = a.CanUseBlueprint(bp); } catch { can = false; }
+        if (can) { pick = a; break; }
+    }
+    if (pick == null && ourDisAsm.Count == 0)
+    {
+        foreach (var a in assemblers)
+        {
+            if (!a.IsQueueEmpty || a.CooperativeMode) continue;
+            bool can; try { can = a.CanUseBlueprint(bp); } catch { can = false; }
+            if (!can) continue;
+            a.Mode = MyAssemblerMode.Disassembly;
+            a.UseConveyorSystem = true;
+            ourDisAsm.Add(a.EntityId);
+            pick = a; break;
+        }
+    }
+    if (pick == null) return 0;
+    double amt = Math.Floor(amount);
+    try { pick.AddQueueItem(bp, (VRage.MyFixedPoint)amt); }
+    catch { return 0; }
+    Act("Disassembling " + Math.Round(amt) + " " + name);
+    return amt;
+}
+
+// only cancels disassembly jobs on assemblers WE flipped - a manual disassembly
+// run set up by the player is never touched
+void CancelDis(MyDefinitionId bp)
+{
+    var q = new List<MyProductionItem>();
+    foreach (var a in assemblers)
+    {
+        if (a.Mode != MyAssemblerMode.Disassembly || !ourDisAsm.Contains(a.EntityId)) continue;
+        q.Clear();
+        try { a.GetQueue(q); } catch { continue; }
+        for (int i = q.Count - 1; i >= 0; i--)
+            if (q[i].BlueprintId == bp) { try { a.RemoveQueueItem(i, q[i].Amount); } catch { } }
+    }
+}
+
 void QueueBp(MyDefinitionId bp, double need, bool prio)
 {
     var usable = new List<IMyAssembler>();
@@ -275,6 +368,7 @@ void QueueBp(MyDefinitionId bp, double need, bool prio)
     {
         try
         {
+            if (ourDisAsm.Contains(a.EntityId)) continue;
             if (!a.CanUseBlueprint(bp)) continue;
             if (a.Mode == MyAssemblerMode.Disassembly)
             {
@@ -313,6 +407,7 @@ double RemoveBp(MyDefinitionId bp)
     foreach (var a in assemblers)
     {
         if (allow <= 0) break;
+        if (a.Mode == MyAssemblerMode.Disassembly) continue;
         q.Clear();
         try { a.GetQueue(q); } catch { continue; }
         for (int i = q.Count - 1; i >= 0 && allow > 0; i--)

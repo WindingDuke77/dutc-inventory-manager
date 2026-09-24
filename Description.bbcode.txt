@@ -14,6 +14,7 @@ Issues and pull requests welcome - most fixes in this script came from the commu
 [*][b]Auto container assignment[/b] - type full or missing? Biggest free cargo gets tagged automatically
 [*][b]Bottle refilling that works[/b] - bottles route through tanks with gas, and bottles already stored get topped up too
 [*][b]Autocrafting[/b] - wanted amounts live in the LCD's Custom Data (prefilled with every craftable item). Colored status screen: green = stocked, amber = crafting, red = low
+[*][b]Disassembling[/b] - add D behind the wanted amount (SteelPlate=1000D) and the excess gets melted back down automatically
 [*][b]Refinery management[/b] - auto-fed by ore priority (Stone first by default), ore balanced evenly across refineries, priority ore moved to the front of the queue
 [*][b]Assembler feeding[/b] - queued assemblers get pre-stocked with the exact ingots their queue needs
 [*][b]Ice balancing[/b] - even split across O2/H2 generators, with space reserved for bottles
@@ -21,7 +22,8 @@ Issues and pull requests welcome - most fixes in this script came from the commu
 [*][b]Assembler cleanup[/b] - idle assemblers get emptied back into cargo
 [*][b]Sprite LCDs[/b] - dark flat UI with colored bars on every screen, auto-scrolling when content overflows
 [*][b]Special containers[/b] - per-container loadouts with Normal / Minimum / Limiter / All modes
-[*][b]Performance friendly[/b] - work is spread over 11 small steps, transfers capped per tick
+[*][b]Performance friendly[/b] - work is spread over small resumable steps, transfers capped per tick, safe on 1000+ inventory bases
+[*][b]No warning spam[/b] - storage blocks without conveyor ports (armories, lockers, freight racks) are skipped silently
 [/list]
 
 [h1]Setup[/h1]
@@ -48,7 +50,7 @@ The Autocrafting LCD's Custom Data is your shopping list - prefilled automatical
 [code]SteelPlate=15000P
 Construction=5000
 Motor=1500[/code]
-Modifiers: [b]P[/b] = craft first (priority), [b]I[/b] = ignore item.
+Modifiers: [b]P[/b] = craft first (priority), [b]I[/b] = ignore item, [b]D[/b] = disassemble the excess above the wanted amount.
 Stubborn modded item? Force its blueprint: [code]SomeModItem=100 BP:BlueprintSubtype[/code]
 [b][NoBP][/b] on screen = no assembler can craft that item (modded or not craftable).
 Deep blueprint searching only runs for items with a wanted amount above zero - uncraftable loot sitting in cargo costs nothing.

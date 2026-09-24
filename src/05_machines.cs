@@ -227,6 +227,7 @@ bool Cleanup()
     {
         foreach (var a in assemblers)
         {
+            if (Runtime.CurrentInstructionCount > 30000) break;
             if (!a.IsQueueEmpty) continue;
             var inv = a.GetInventory(0);
             if (inv.ItemCount == 0) continue;

@@ -30,10 +30,22 @@ class UiRow
 
 bool Screens()
 {
-    foreach (var b in mainHolders) { var s = SurfaceFor(b, MAIN_TAGS); if (s != null) DrawMain(s); }
-    foreach (var b in warnHolders) { var s = SurfaceFor(b, WARN_TAGS); if (s != null) DrawList(s, "WARNINGS", WarnRows(), true); }
-    foreach (var b in actHolders) { var s = SurfaceFor(b, ACT_TAGS); if (s != null) DrawList(s, "ACTIONS", ActRows(), true); }
-    foreach (var b in invHolders) WriteInv(b);
+    // many screens on a big base: drawing resumes next tick instead of overrunning
+    int i = 0;
+    for (int g = 0; g < 4; g++)
+    {
+        var list = g == 0 ? mainHolders : g == 1 ? warnHolders : g == 2 ? actHolders : invHolders;
+        foreach (var b in list)
+        {
+            if (i++ < scrPos) continue;
+            if (Runtime.CurrentInstructionCount > 30000) { scrPos = i - 1; return false; }
+            if (g == 0) { var s = SurfaceFor(b, MAIN_TAGS); if (s != null) DrawMain(s); }
+            else if (g == 1) { var s = SurfaceFor(b, WARN_TAGS); if (s != null) DrawList(s, "WARNINGS", WarnRows(), true); }
+            else if (g == 2) { var s = SurfaceFor(b, ACT_TAGS); if (s != null) DrawList(s, "ACTIONS", ActRows(), true); }
+            else WriteInv(b);
+        }
+    }
+    scrPos = 0;
     return true;
 }
 
@@ -245,11 +257,18 @@ void RenderInv(IMyTextSurface s, string[] lines)
             if (kv.Key.ToString().EndsWith("Ingot/Stone")) nm = "Gravel";
             if (!hideType) nm += " (" + kv.Key.TypeId.Replace("MyObjectBuilder_", "").Substring(0, 2) + ")";
             int cc = Cat(kv.Key);
+            // ingot rows also show the unrefined ore still waiting (thanks LucaZanna)
+            string extra = "";
+            if (cc == INGOT)
+            {
+                double oreAmt = CountOf(MyItemType.MakeOre(kv.Key.SubtypeId));
+                if (oreAmt >= 1) extra = " +" + Num(oreAmt);
+            }
             rows.Add(new UiRow
             {
                 kind = 1,
                 name = nm,
-                val = Num(kv.Value),
+                val = Num(kv.Value) + extra,
                 frac = noBar ? -1 : (relMax > 0 ? kv.Value / relMax : 0),
                 col = cc >= 0 ? catColors[cc] : UI_TEXT
             });

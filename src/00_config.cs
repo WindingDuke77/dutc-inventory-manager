@@ -1,5 +1,5 @@
 // ========================================
-//         DUTC INVENTORY  v2.0.4
+//         DUTC INVENTORY  v2.0.5
 // ========================================
 // Sorting + even container balancing, auto container assignment, bottle filling
 // (works!), special loadout containers, autocrafting via Custom Data with sprite
@@ -75,6 +75,7 @@ float UI_SCALE = 1.0f;              // sprite screen size multiplier (bigger tex
 bool enableAutocrafting = true;
 string CRAFT_KEY = "Autocrafting";  // LCD name keyword for the autocrafting screen(s)
 double craftMargin = 0.05;          // 5% - craft when below wanted*(1-margin)
+bool allowDisassembly = true;       // D modifier (Name=1000D): disassemble the excess above the wanted amount
 
 bool feedRefineries = true;         // keep refineries loaded with ore
 bool balanceRefineries = true;      // equalize each ore across all refineries

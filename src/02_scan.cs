@@ -8,6 +8,7 @@ bool Scan()
     {
         cycles++;
         warnings.Clear(); warnSet.Clear();
+        reachBudget = 5;
         // conveyor path results are cached; refresh them every ~5 minutes
         if (cycles % 150 == 0) { convCache.Clear(); reachCache.Clear(); }
 
@@ -127,15 +128,20 @@ bool ContainsAny(string s, string[] tags)
     return false;
 }
 
+// item counting is chunked like Scan: a 1000+ inventory base can never push one
+// tick past the instruction limit (thanks EBALL360). Partial counts accumulate
+// in stockTmp and only replace the live stock once the pass is complete.
 bool Count()
 {
-    stock.Clear(); byName.Clear();
+    if (countPass == 0 && countPos == 0) stockTmp.Clear();
     var items = new List<MyInventoryItem>();
-    for (int pass = 0; pass < 2; pass++)
+    while (countPass < 2)
     {
-        var list = pass == 0 ? allInv : specials;
-        foreach (var b in list)
+        var list = countPass == 0 ? allInv : specials;
+        for (; countPos < list.Count; countPos++)
         {
+            if (Runtime.CurrentInstructionCount > 32000) return false;
+            var b = list[countPos];
             if (b.CustomName.Contains(HIDDEN_KEY)) continue;
             for (int q = 0; q < b.InventoryCount; q++)
             {
@@ -143,11 +149,16 @@ bool Count()
                 foreach (var it in items)
                 {
                     double a = (double)it.Amount;
-                    if (stock.ContainsKey(it.Type)) stock[it.Type] += a; else stock[it.Type] = a;
+                    if (stockTmp.ContainsKey(it.Type)) stockTmp[it.Type] += a; else stockTmp[it.Type] = a;
                 }
             }
         }
+        countPos = 0; countPass++;
     }
+    countPass = 0;
+    stock.Clear();
+    foreach (var kv in stockTmp) stock[kv.Key] = kv.Value;
+    byName.Clear();
     foreach (var t in stock.Keys)
     {
         byName[t.SubtypeId] = t;

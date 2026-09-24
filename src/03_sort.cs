@@ -15,6 +15,9 @@ bool Sort()
         if (excludeGrinders && b is IMyShipGrinder) continue;
         if (excludeDrills && b is IMyShipDrill) continue;
         if (b.CustomName.Contains(HIDDEN_KEY)) continue;
+        // storage blocks with no conveyor ports (armories, lockers, freight racks...)
+        // are skipped silently - no "No conveyor path" spam (thanks Mortus Eclipse)
+        if (!Reachable(b)) continue;
         bool foreignGrid = !b.IsSameConstructAs(Me);
         var inv = b.GetInventory(SrcInvIndex(b));
         if (inv.ItemCount == 0) continue;
@@ -69,6 +72,7 @@ bool Balance()
         var totals = new Dictionary<MyItemType, double>();
         foreach (var w in cats[c])
         {
+            if (Runtime.CurrentInstructionCount > 30000) return true;
             items.Clear(); w.GetInventory(0).GetItems(items);
             foreach (var it in items)
             {
@@ -110,8 +114,10 @@ bool Balance()
 // IIM-compatible modes: item=100 (normal), item=100M (minimum), item=100L (limiter), item=All
 bool SpecialFill()
 {
-    foreach (var b in specials)
+    for (; specialIdx < specials.Count; specialIdx++)
     {
+        if (Runtime.CurrentInstructionCount > 30000) return false;
+        var b = specials[specialIdx];
         var inv = b.GetInventory(0);
         foreach (var raw in b.CustomData.Split('\n'))
         {
@@ -148,5 +154,6 @@ bool SpecialFill()
             }
         }
     }
+    specialIdx = 0;
     return true;
 }

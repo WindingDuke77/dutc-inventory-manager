@@ -31,6 +31,13 @@ Dictionary<long,double> bottleMem = new Dictionary<long,double>();
 List<IMyTerminalBlock> scanBlocks = new List<IMyTerminalBlock>();
 List<IMyCubeGrid> noSortGrids = new List<IMyCubeGrid>();
 int scanPos = 0;
+int countPos = 0;
+int countPass = 0;
+Dictionary<MyItemType,double> stockTmp = new Dictionary<MyItemType,double>();
+HashSet<string> quickMiss = new HashSet<string>();
+HashSet<long> ourDisAsm = new HashSet<long>();
+int specialIdx = 0;
+int scrPos = 0;
 Dictionary<long,bool> convCache = new Dictionary<long,bool>();
 Dictionary<long,bool> reachCache = new Dictionary<long,bool>();
 int reachBudget = 0;
@@ -86,7 +93,7 @@ public void Main(string arg)
     arg = arg.Trim().ToLower();
     if (arg == "pause") paused = true;
     if (arg == "resume" || arg == "run") paused = false;
-    if (arg == "reset") { bpCache.Clear(); noBp.Clear(); probePos.Clear(); convCache.Clear(); reachCache.Clear(); barCache.Clear(); Storage = ""; lastError = ""; }
+    if (arg == "reset") { bpCache.Clear(); noBp.Clear(); probePos.Clear(); convCache.Clear(); reachCache.Clear(); barCache.Clear(); quickMiss.Clear(); Storage = ""; lastError = ""; }
     tick++;
     Echo("DUTC INVENTORY " + "|/-\\"[tick % 4]);
     Echo("Step: " + stepNames[step]);
