@@ -18,6 +18,10 @@ Dictionary<string,string> knownBp = new Dictionary<string,string>
 // uncraftable items (Fruit...) always reach a final NoBP verdict (thanks Oxnard)
 Dictionary<string,int> probePos = new Dictionary<string,int>();
 string[] vanillaCraft = { "SteelPlate","InteriorPlate","Construction","MetalGrid","SmallTube","LargeTube","Motor","Display","BulletproofGlass","Computer","Reactor","Thrust","GravityGenerator","Medical","RadioCommunication","Detector","Explosives","Girder","SolarCell","PowerCell","Superconductor","Canvas" };
+// prefilled onto the list even when none are in stock yet, so ammo, tools and
+// bottles show up without having to craft one first (thanks Oxnard)
+string[] vanillaEnsure = { "NATO_25x184mm","Missile200mm","AutocannonClip","MediumCalibreAmmo","LargeCalibreAmmo","SmallRailgunAmmo","LargeRailgunAmmo","AutomaticRifleGun_Mag_20rd","PreciseAutomaticRifleGun_Mag_5rd","RapidFireAutomaticRifleGun_Mag_50rd","UltimateAutomaticRifleGun_Mag_30rd","SemiAutoPistolMagazine","FullAutoPistolMagazine","ElitePistolMagazine","FlareClip","AngleGrinderItem","AngleGrinder2Item","AngleGrinder3Item","AngleGrinder4Item","WelderItem","Welder2Item","Welder3Item","Welder4Item","HandDrillItem","HandDrill2Item","HandDrill3Item","HandDrill4Item","OxygenBottle","HydrogenBottle" };
+string lastAsmSig = "";
 int probeBudget = 0;
 
 class CRow
@@ -25,7 +29,7 @@ class CRow
     public string name = "";
     public double cur;
     public double want;
-    public int state;   // 0 = normal, -1 = NoBP, -2 = ignored, -3 = still checking
+    public int state;   // 0 = normal, -1 = NoBP, -2 = ignored, -3 = still checking, -4 = bad BP: override
     public double inQ;
     public double disQ;
 }
@@ -38,7 +42,9 @@ bool Craft()
     probeBudget = 1;
     // quick-probe misses are re-checked occasionally (a new assembler type may
     // have arrived), not every cycle - modded junk items stay cheap (thanks EBALL360)
-    if (cycles % 300 == 0) quickMiss.Clear();
+    if (cycles % 60 == 0) quickMiss.Clear();
+    string asmSig = distinctAsm.Count + "/" + assemblers.Count;
+    if (asmSig != lastAsmSig) { lastAsmSig = asmSig; quickMiss.Clear(); }
     // assemblers we flipped to disassembly go back to assembly once they finish
     if (ourDisAsm.Count > 0)
     {
@@ -82,10 +88,19 @@ bool Craft()
             int eq = l.IndexOf('=');
             if (eq <= 0) continue;
             string name = l.Substring(0, eq).Trim();
+            // pasted full paths work too: "MyObjectBuilder_SeedItem/Grain" counts the
+            // SEEDS, not the crop - without this the processor loops forever (thanks Froman Joe)
+            if (name.StartsWith("MyObjectBuilder_")) name = name.Substring(16);
             string val = l.Substring(eq + 1).Trim();
             string bpOv = "";
             var mo = System.Text.RegularExpressions.Regex.Match(val, @"(?i)bp:([\w/]+)");
-            if (mo.Success) { bpOv = mo.Groups[1].Value; val = val.Replace(mo.Value, ""); }
+            if (mo.Success)
+            {
+                bpOv = mo.Groups[1].Value; val = val.Replace(mo.Value, "");
+                // IIM lists print blueprints as full paths - keep only the subtype (thanks The Burger Buster)
+                int sl = bpOv.LastIndexOf('/');
+                if (sl >= 0) bpOv = bpOv.Substring(sl + 1);
+            }
             double want;
             double.TryParse(System.Text.RegularExpressions.Regex.Match(val, @"\d+").Value, out want);
             string mods = System.Text.RegularExpressions.Regex.Replace(val, @"[\d\.\s]", "").ToUpper();
@@ -100,14 +115,29 @@ bool Craft()
     {
         var t = kv.Key;
         if (!t.TypeId.EndsWith("_Component") && !t.TypeId.EndsWith("_AmmoMagazine") && Cat(t) != FOOD && !t.TypeId.EndsWith("_PhysicalGunObject") && !t.TypeId.EndsWith("_PhysicalObject")) continue;
-        if (seen.Contains(t.SubtypeId)) continue;
-        if (quickMiss.Contains(t.SubtypeId)) continue;
+        // seed items list under their qualified name, so "SeedItem/Grain" counts
+        // seeds and plain "Grain" keeps counting the crop (thanks Froman Joe)
+        string anm = t.SubtypeId;
+        string shortTy = t.TypeId.Replace("MyObjectBuilder_", "");
+        if (shortTy == "SeedItem" || shortTy == "Seed" || shortTy == "Seeds") anm = shortTy + "/" + t.SubtypeId;
+        if (seen.Contains(anm)) continue;
+        if (quickMiss.Contains(anm)) continue;
         MyDefinitionId bp0;
-        int st0 = BpState(t.SubtypeId, out bp0, false);
-        if (st0 != 1) { if (st0 == 0) quickMiss.Add(t.SubtypeId); continue; }
-        seen.Add(t.SubtypeId);
-        entries.Add(new[] { t.SubtypeId, "0", "", "" });
-        newLines.Append(t.SubtypeId + "=0\n");
+        int st0 = BpState(anm, out bp0, false);
+        if (st0 != 1) { if (st0 == 0) quickMiss.Add(anm); continue; }
+        seen.Add(anm);
+        entries.Add(new[] { anm, "0", "", "" });
+        newLines.Append(anm + "=0\n");
+    }
+    foreach (var v in vanillaEnsure)
+    {
+        if (seen.Contains(v) || quickMiss.Contains(v)) continue;
+        MyDefinitionId bp1;
+        int st1 = BpState(v, out bp1, false);
+        if (st1 != 1) { if (st1 == 0) quickMiss.Add(v); continue; }
+        seen.Add(v);
+        entries.Add(new[] { v, "0", "", "" });
+        newLines.Append(v + "=0\n");
     }
     if (newLines.Length > 0)
         master.CustomData = master.CustomData.TrimEnd('\n') + "\n" + newLines.ToString().TrimEnd('\n');
@@ -122,15 +152,20 @@ bool Craft()
         MyItemType t;
         double cur = byName.TryGetValue(name, out t) ? CountOf(t) : 0;
         if (mods.Contains("I")) { craftRows.Add(new CRow { name = name, cur = cur, want = want, state = -2 }); continue; }
+        bool ovFail = false;
         if (e[3] != "" && !bpCache.ContainsKey(name))
         {
             MyDefinitionId ov;
             if (TestBp(e[3], out ov)) { bpCache[name] = ov; noBp.Remove(name); }
+            else ovFail = true;
         }
         MyDefinitionId bp;
         // deep blueprint searching only for items someone actually WANTS - inventory
         // clutter (raw meats, carcasses...) never triggers the sweep (thanks Oxnard)
         int st = BpState(name, out bp, want > 0);
+        // a BP: override that didn't resolve shows as BP? - the override name is
+        // wrong or no present assembler accepts it (thanks The Burger Buster)
+        if (st != 1 && ovFail) { craftRows.Add(new CRow { name = name, cur = cur, want = want, state = -4 }); continue; }
         if (st == 0 && want <= 0) { craftRows.Add(new CRow { name = name, cur = cur, want = want, state = 0 }); continue; }
         if (st == 0) { craftRows.Add(new CRow { name = name, cur = cur, want = want, state = -3 }); continue; }
         if (st == -1) { craftRows.Add(new CRow { name = name, cur = cur, want = want, state = -1 }); continue; }
@@ -282,6 +317,7 @@ int DrawCraftPanel(IMyTextSurface s, int index, int start, bool last)
         Color col; string valTxt; double frac = -1;
         if (r.state == -2) { col = UI_DIM; valTxt = "ignored"; }
         else if (r.state == -3) { col = UI_DIM; valTxt = Num(r.cur) + "  checking.."; }
+        else if (r.state == -4) { col = UI_BAD; valTxt = Num(r.cur) + "  BP?"; }
         else if (r.state == -1) { col = UI_BAD; valTxt = Num(r.cur) + "  NoBP"; }
         else
         {
