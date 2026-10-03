@@ -8,7 +8,7 @@ Issues and pull requests welcome - most fixes in this script came from the commu
 [h1]Features[/h1]
 [list]
 [*][b]Item sorting[/b] - everything routes into type containers: Ores / Ingots / Components / Tools / Ammo / Bottles / Food
-[*][b]Food category[/b] - vanilla food, ingredients and seeds get their own containers; modded bottle-type items (powerbanks, shields, paint guns) no longer cycle through tanks
+[*][b]Food category[/b] - food, ingredients, seeds and produce get their own containers, vegetables from generic-typed mods included (extendable foodWords list in the config); modded bottle-type items (powerbanks, shields, paint guns) no longer cycle through tanks
 [*][b]Even container balancing[/b] - items split equally across same-type containers (9 tools / 3 boxes = 3 each)
 [*][b]Turret ammo loading[/b] - every turret and fixed gun kept stocked, subgrids and docked ships included
 [*][b]Auto container assignment[/b] - type full or missing? Biggest free cargo gets tagged automatically
@@ -53,7 +53,8 @@ Motor=1500[/code]
 Modifiers: [b]P[/b] = craft first (priority), [b]I[/b] = ignore item, [b]D[/b] = disassemble the excess above the wanted amount.
 Stubborn modded item? Force its blueprint: [code]SomeModItem=100 BP:BlueprintSubtype[/code]
 [b][NoBP][/b] on screen = no assembler can craft that item (modded or not craftable).
-Deep blueprint searching only runs for items with a wanted amount above zero - uncraftable loot sitting in cargo costs nothing.
+Deep blueprint searching needs no setup: it runs automatically for any item with a wanted amount above zero, and every blueprint it finds (or rules out) is remembered in the PB's Storage across recompiles and world reloads. Uncraftable loot sitting in cargo costs nothing.
+Multiple screens? Name them [b]Autocrafting 1[/b], [b]Autocrafting 2[/b]... - the list flows in that order.
 
 [h1]Keywords[/h1]
 [list]

@@ -93,7 +93,7 @@ public void Main(string arg)
     arg = arg.Trim().ToLower();
     if (arg == "pause") paused = true;
     if (arg == "resume" || arg == "run") paused = false;
-    if (arg == "reset") { bpCache.Clear(); noBp.Clear(); probePos.Clear(); convCache.Clear(); reachCache.Clear(); barCache.Clear(); quickMiss.Clear(); Storage = ""; lastError = ""; }
+    if (arg == "reset") { bpCache.Clear(); noBp.Clear(); probePos.Clear(); convCache.Clear(); reachCache.Clear(); barCache.Clear(); quickMiss.Clear(); catCache.Clear(); Storage = ""; lastError = ""; }
     tick++;
     Echo("DUTC INVENTORY " + "|/-\\"[tick % 4]);
     Echo("Step: " + stepNames[step]);

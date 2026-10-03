@@ -2,7 +2,18 @@
 
 int SrcInvIndex(IMyTerminalBlock b) { return b is IMyProductionBlock ? 1 : 0; }
 
+// classification is cached per item type - the food word scan only ever runs once per type
+Dictionary<MyItemType,int> catCache = new Dictionary<MyItemType,int>();
 int Cat(MyItemType t)
+{
+    int c;
+    if (catCache.TryGetValue(t, out c)) return c;
+    c = CatCalc(t);
+    catCache[t] = c;
+    return c;
+}
+
+int CatCalc(MyItemType t)
 {
     foreach (var s in foodItems) if (t.SubtypeId == s) return FOOD;
     string ty = t.TypeId;
@@ -11,12 +22,27 @@ int Cat(MyItemType t)
     if (ty.EndsWith("_Component")) return COMP;
     if (ty.EndsWith("_AmmoMagazine")) return AMMO;
     if (ty.EndsWith("_OxygenContainerObject") || ty.EndsWith("_GasContainerObject")) return BOTTLE;
-    if (ty.EndsWith("_ConsumableItem") || ty.EndsWith("_Ingredient") || ty.EndsWith("_IngredientItem") || ty.EndsWith("_SeedItem") || ty.EndsWith("_Seed") || ty.EndsWith("_Food") || ty.EndsWith("_FoodItem")) return FOOD;
+    // broad type match: catches modded builder types like FoodItem, EdibleItem,
+    // DrinkItem, SeedPack... not just the exact vanilla suffixes
+    if (ty.Contains("Consumable") || ty.Contains("Ingredient") || ty.Contains("Seed") || ty.Contains("Food") || ty.Contains("Edible") || ty.Contains("Drink")) return FOOD;
+    // vegetables and other produce that mods ship under a generic item type:
+    // match by name, AFTER every real category had its chance (thanks Lord Byte)
+    foreach (var w in foodWords) if (t.SubtypeId.IndexOf(w, StringComparison.OrdinalIgnoreCase) >= 0) return FOOD;
     if (ty.EndsWith("_PhysicalGunObject") || ty.EndsWith("_PhysicalObject") || ty.EndsWith("_Datapad")) return TOOL;
     return -1;
 }
 
 bool IsCat(IMyTerminalBlock b, int c) { return cats[c].Contains(b); }
+
+// panel order for multi-screen autocrafting: the number after the keyword,
+// 0 when unnumbered, so "Autocrafting" leads and "Autocrafting 2" follows
+int CraftOrd(string n)
+{
+    int p = n.IndexOf(CRAFT_KEY);
+    if (p < 0) return int.MaxValue;
+    var m = System.Text.RegularExpressions.Regex.Match(n.Substring(p + CRAFT_KEY.Length), @"\d+");
+    return m.Success ? int.Parse(m.Value) : 0;
+}
 
 // any ice-type ore, modded included: FilteredIce, AlienLakeIce... (thanks aantono)
 bool IsIce(MyItemType t) { return t.TypeId.EndsWith("_Ore") && t.SubtypeId.IndexOf("Ice", StringComparison.OrdinalIgnoreCase) >= 0; }

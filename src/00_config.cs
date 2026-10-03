@@ -1,5 +1,5 @@
 // ========================================
-//         DUTC INVENTORY  v2.0.5
+//         DUTC INVENTORY  v2.0.6
 // ========================================
 // Sorting + even container balancing, auto container assignment, bottle filling
 // (works!), special loadout containers, autocrafting via Custom Data with sprite
@@ -44,6 +44,10 @@ string BOTTLE_KEY = "Bottles";
 string FOOD_KEY = "Food";           // food, ingredients and seeds get their own container type
 // items that always count as Food no matter what internal type their mod gives them
 string[] foodItems = { "Algae", "Grain" };
+// name fragments that mark an item as Food when its mod uses a generic item type
+// (vegetables etc. - thanks Lord Byte). Case-insensitive, checked only for items
+// that didn't already match a real category - extend freely.
+string[] foodWords = { "Apple","Banana","Berry","Bread","Cabbage","Carrot","Cheese","Coffee","Cola","Corn","Cucumber","Egg","Fish","Flour","Fruit","Herb","Honey","Kale","Lettuce","Meal","Meat","Melon","Milk","Mushroom","Oat","Onion","Pepper","Potato","Pumpkin","Ration","Rice","Salad","Sausage","Soup","Soy","Stew","Sugar","Tomato","Veg","Wheat" };
 
 string SPECIAL_KEY = "Special";
 string HIDDEN_KEY = "Hidden";
@@ -74,6 +78,11 @@ float UI_SCALE = 1.0f;              // sprite screen size multiplier (bigger tex
 
 bool enableAutocrafting = true;
 string CRAFT_KEY = "Autocrafting";  // LCD name keyword for the autocrafting screen(s)
+                                    // multiple panels: "Autocrafting 1", "Autocrafting 2"... order
+                                    // follows the number after the keyword
+// deep modded-blueprint search needs NO setup: it runs automatically for any item
+// whose wanted amount is above zero, and every result is remembered in Storage
+// (survives recompiles and world reloads). Force one manually: Name=100 BP:Blueprint
 double craftMargin = 0.05;          // 5% - craft when below wanted*(1-margin)
 bool allowDisassembly = true;       // D modifier (Name=1000D): disassemble the excess above the wanted amount
 

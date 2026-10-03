@@ -101,7 +101,9 @@ bool Scan()
     untagged.Sort((a, z) => ((double)z.GetInventory(0).MaxVolume).CompareTo((double)a.GetInventory(0).MaxVolume));
     craftLCDs.Clear();
     GridTerminalSystem.GetBlocksOfType(craftLCDs, p => p.IsSameConstructAs(Me) && p.CustomName.Contains(CRAFT_KEY));
-    craftLCDs.Sort((a, z) => a.CustomName.CompareTo(z.CustomName));
+    // "Autocrafting 1", "Autocrafting 2"... panels follow the number AFTER the
+    // keyword, whatever the rest of the block name looks like (thanks Lord Byte)
+    craftLCDs.Sort((a, z) => { int na = CraftOrd(a.CustomName), nz = CraftOrd(z.CustomName); return na != nz ? na.CompareTo(nz) : a.CustomName.CompareTo(z.CustomName); });
     mainHolders.Clear(); invHolders.Clear(); warnHolders.Clear(); actHolders.Clear();
     var scr = new List<IMyTerminalBlock>();
     GridTerminalSystem.GetBlocksOfType<IMyTerminalBlock>(scr, x => x.IsSameConstructAs(Me));
