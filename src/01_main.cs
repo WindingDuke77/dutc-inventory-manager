@@ -31,6 +31,7 @@ Dictionary<long,double> bottleMem = new Dictionary<long,double>();
 List<IMyTerminalBlock> scanBlocks = new List<IMyTerminalBlock>();
 List<IMyCubeGrid> noSortGrids = new List<IMyCubeGrid>();
 int scanPos = 0;
+int scanPhase = 0;
 int countPos = 0;
 int countPass = 0;
 Dictionary<MyItemType,double> stockTmp = new Dictionary<MyItemType,double>();

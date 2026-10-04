@@ -2,9 +2,14 @@
 
 // big bases: block processing is chunked across ticks so one scan can never
 // stall the game (thanks Oxnard for the 1044-inventory report)
+// three phases, none of which can overrun on a huge grid (thanks EBALL360 -
+// Space Nova proved the one-tick setup and finish parts were the real bombs):
+//   0 = election + clears + an engine-side block grab with NO per-block lambda
+//   1 = chunked per-block pass (inventory logic AND screen tag detection)
+//   2 = finish: dedup, sorts with precomputed keys
 bool Scan()
 {
-    if (scanPos == 0)
+    if (scanPhase == 0)
     {
         cycles++;
         warnings.Clear(); warnSet.Clear();
@@ -50,6 +55,7 @@ bool Scan()
         allInv.Clear(); specials.Clear(); untagged.Clear();
         refineries.Clear(); assemblers.Clear(); gens.Clear(); reactors.Clear(); tanks.Clear(); guns.Clear();
         noSortGrids.Clear();
+        mainHolders.Clear(); invHolders.Clear(); warnHolders.Clear(); actHolders.Clear();
         var conns = new List<IMyShipConnector>();
         GridTerminalSystem.GetBlocksOfType(conns);
         foreach (var c in conns)
@@ -60,16 +66,31 @@ bool Scan()
             if (c.CubeGrid.IsSameConstructAs(Me.CubeGrid)) noSortGrids.Add(o.CubeGrid);
             else noSortGrids.Add(c.CubeGrid);
         }
-        GridTerminalSystem.GetBlocksOfType<IMyTerminalBlock>(scanBlocks, b => b.HasInventory);
+        // no predicate lambda: on a 10k+ block grid a per-block lambda alone can
+        // blow the 50k limit in this single tick - filtering happens chunked below
+        GridTerminalSystem.GetBlocks(scanBlocks);
+        scanPos = 0;
+        scanPhase = 1;
+        return false;
     }
+    if (scanPhase == 1)
+    {
     int processed = 0;
     for (; scanPos < scanBlocks.Count; scanPos++)
     {
         if (processed >= scanChunk || Runtime.CurrentInstructionCount > 30000) return false;
         var b = scanBlocks[scanPos];
+        bool same = b.IsSameConstructAs(Me);
+        if (same)
+        {
+            if (HasTag(b, MAIN_TAGS)) mainHolders.Add(b);
+            if (HasTag(b, INV_TAGS)) invHolders.Add(b);
+            if (HasTag(b, WARN_TAGS)) warnHolders.Add(b);
+            if (HasTag(b, ACT_TAGS)) actHolders.Add(b);
+        }
+        if (!b.HasInventory) continue;
         processed++;
         string n = b.CustomName;
-        bool same = b.IsSameConstructAs(Me);
         if (!same)
         {
             if (!includeDockedGrids) continue;
@@ -103,6 +124,10 @@ bool Scan()
                  && (storageWhitelist.Length == 0 || MatchList(b, storageWhitelist))) untagged.Add((IMyCargoContainer)b);
     }
     scanPos = 0;
+    scanPhase = 2;
+    return false;
+    }
+    scanPhase = 0;
     // one assembler per block type - blueprint discovery only needs to probe each type once
     distinctAsm.Clear();
     foreach (var a in assemblers)
@@ -112,22 +137,16 @@ bool Scan()
         if (!dup) distinctAsm.Add(a);
     }
     for (int c = 0; c < NCAT; c++) cats[c].Sort((a, z) => a.CustomName.CompareTo(z.CustomName));
-    untagged.Sort((a, z) => ((double)z.GetInventory(0).MaxVolume).CompareTo((double)a.GetInventory(0).MaxVolume));
+    // precomputed sort keys - the old comparator called GetInventory on every
+    // compare, which alone could overrun on hundreds of untagged containers
+    var vol = new Dictionary<long,double>();
+    foreach (var u in untagged) vol[u.EntityId] = (double)u.GetInventory(0).MaxVolume;
+    untagged.Sort((a, z) => vol[z.EntityId].CompareTo(vol[a.EntityId]));
     craftLCDs.Clear();
     GridTerminalSystem.GetBlocksOfType(craftLCDs, p => p.IsSameConstructAs(Me) && p.CustomName.Contains(CRAFT_KEY));
     // "Autocrafting 1", "Autocrafting 2"... panels follow the number AFTER the
     // keyword, whatever the rest of the block name looks like (thanks Lord Byte)
     craftLCDs.Sort((a, z) => { int na = CraftOrd(a.CustomName), nz = CraftOrd(z.CustomName); return na != nz ? na.CompareTo(nz) : a.CustomName.CompareTo(z.CustomName); });
-    mainHolders.Clear(); invHolders.Clear(); warnHolders.Clear(); actHolders.Clear();
-    var scr = new List<IMyTerminalBlock>();
-    GridTerminalSystem.GetBlocksOfType<IMyTerminalBlock>(scr, x => x.IsSameConstructAs(Me));
-    foreach (var x in scr)
-    {
-        if (HasTag(x, MAIN_TAGS)) mainHolders.Add(x);
-        if (HasTag(x, INV_TAGS)) invHolders.Add(x);
-        if (HasTag(x, WARN_TAGS)) warnHolders.Add(x);
-        if (HasTag(x, ACT_TAGS)) actHolders.Add(x);
-    }
     return true;
 }
 
