@@ -50,7 +50,8 @@ int cycles = 0;
 bool paused = false;
 bool standby = false;
 string masterName = "";
-string DUTC_MARKER = "[DUTC-INV-ACTIVE]";
+Dictionary<long,string> beatSeen = new Dictionary<long,string>();
+Dictionary<long,int> beatAge = new Dictionary<long,int>();
 string lastError = "";
 string[] stepNames = { "Scan","Count","Assign","Sort","Balance","Special","Craft","Refineries","Ice","Uranium","Turrets","Cleanup","Screens" };
 

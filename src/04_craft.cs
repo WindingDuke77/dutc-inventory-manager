@@ -38,7 +38,10 @@ List<CRow> craftRows = new List<CRow>();
 bool Craft()
 {
     if (!enableAutocrafting || craftLCDs.Count == 0) return true;
-    if (assemblers.Count == 0) { Warn("Autocrafting: no usable assemblers!"); return true; }
+    var master = craftLCDs[0];
+    if (!master.CustomData.Contains(CRAFT_MARKER)) SetupCraftCD();
+    // no assembler is no reason for a BLANK screen - draw it and say why (thanks Enig)
+    if (assemblers.Count == 0) { Warn("Autocrafting: no usable assemblers!"); craftRows.Clear(); DrawCraftScreens(); return true; }
     probeBudget = 1;
     // quick-probe misses are re-checked occasionally (a new assembler type may
     // have arrived), not every cycle - modded junk items stay cheap (thanks EBALL360)
@@ -74,9 +77,6 @@ bool Craft()
         double actual; queued.TryGetValue(k, out actual);
         if (ourQueued[k] > actual) ourQueued[k] = actual;
     }
-    var master = craftLCDs[0];
-    if (!master.CustomData.Contains(CRAFT_MARKER)) SetupCraftCD();
-
     var entries = new List<string[]>();
     var seen = new HashSet<string>();
     foreach (var p in craftLCDs)
@@ -203,8 +203,49 @@ bool Craft()
         }
         craftRows.Add(new CRow { name = name, cur = cur, want = want, state = 0, inQ = inQ, disQ = disQ });
     }
+    if (balanceAssemblers) RebalanceAsm();
     DrawCraftScreens();
     return true;
+}
+
+// fast assemblers run dry while slow ones still hold a long queue - an idle
+// assembler takes half the tail off the busiest one. Only amounts THIS script
+// queued are moved; Build Planner / Nanobot entries stay put (thanks jokerace45)
+void RebalanceAsm()
+{
+    var q = new List<MyProductionItem>();
+    foreach (var idle in assemblers)
+    {
+        if (!idle.IsQueueEmpty || idle.CooperativeMode) continue;
+        if (idle.Mode == MyAssemblerMode.Disassembly || ourDisAsm.Contains(idle.EntityId)) continue;
+        if (Runtime.CurrentInstructionCount > 30000) return;
+        IMyAssembler rich = null; int richIdx = -1; double richAmt = 0; MyDefinitionId richBp = new MyDefinitionId();
+        foreach (var a in assemblers)
+        {
+            if (a == idle || a.Mode == MyAssemblerMode.Disassembly || a.IsQueueEmpty) continue;
+            q.Clear();
+            try { a.GetQueue(q); } catch { continue; }
+            if (q.Count == 0) continue;
+            // only the LAST queue entry is considered - that is where this script appends
+            int i = q.Count - 1;
+            double own; ourQueued.TryGetValue(q[i].BlueprintId, out own);
+            double amt = Math.Min((double)q[i].Amount, own);
+            if (amt < 2) continue;
+            bool can; try { can = idle.CanUseBlueprint(q[i].BlueprintId); } catch { can = false; }
+            if (!can) continue;
+            if (amt > richAmt) { rich = a; richIdx = i; richAmt = amt; richBp = q[i].BlueprintId; }
+        }
+        if (rich == null) continue;
+        double move = Math.Floor(richAmt / 2);
+        if (move < 1) continue;
+        try
+        {
+            rich.RemoveQueueItem(richIdx, (VRage.MyFixedPoint)move);
+            idle.AddQueueItem(richBp, (VRage.MyFixedPoint)move);
+            Act("Rebalanced " + Math.Round(move) + " " + richBp.SubtypeName);
+        }
+        catch { }
+    }
 }
 
 // First-time setup: header, migrate old text-format entries (v1.1 / IIM), prefill vanilla craftables.
@@ -217,6 +258,7 @@ void SetupCraftCD()
     sbcd.Append("# Modifiers after the number:  P = craft first (priority),  I = ignore\n");
     sbcd.Append("#   D = disassemble the excess above the wanted amount (e.g. SteelPlate=1000D)\n");
     sbcd.Append("# Modded item stuck on NoBP? Force its blueprint: Name=100 BP:BlueprintSubtype\n");
+    sbcd.Append("# Blueprint name unknown? Queue the item once by hand and hover it in the assembler's production queue.\n");
     sbcd.Append("# New craftable items get added here automatically.\n");
     var have = new HashSet<string>();
     foreach (var p in craftLCDs)
@@ -330,7 +372,7 @@ int DrawCraftPanel(IMyTextSurface s, int index, int start, bool last)
         if (frac >= 0) DrawBar(f, off + new Vector2(W * 0.845f, y + 8f * sc), W * 0.25f, 10f * sc, frac, col);
         y += rowPx; drawn++;
     }
-    if (total == 0) f.Add(Txt("No craftable items known yet", off + new Vector2(W * 0.5f, H * 0.45f), 0.7f * sc, UI_DIM));
+    if (total == 0) f.Add(Txt(assemblers.Count == 0 ? "No usable assembler on this grid" : "No craftable items known yet", off + new Vector2(W * 0.5f, H * 0.45f), 0.7f * sc, assemblers.Count == 0 ? UI_WARNC : UI_DIM));
     f.Dispose();
     return last ? Math.Max(0, total - start) : maxRows;
 }

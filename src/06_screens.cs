@@ -57,6 +57,8 @@ void DrawMain(IMyTextSurface s)
     // all vertical spacing in PIXELS so tall/vertical LCDs don't stretch rows apart (thanks VFox32)
     f.Add(Txt("DUTC INVENTORY", off + new Vector2(W * 0.5f, 10f * sc), 1.15f * sc, UI_DIM));
     f.Add(Txt(("" + "|/-\\"[tick % 4]), off + new Vector2(W * 0.95f, 10f * sc), 1.0f * sc, UI_DIM, TextAlignment.RIGHT));
+    // standby was only visible in the PB terminal before - say it on screen too (thanks Enig)
+    if (standby) f.Add(Txt("STANDBY - " + TruncS(masterName.Replace("\n", " "), 34) + " is active", off + new Vector2(W * 0.5f, 42f * sc), 0.55f * sc, UI_WARNC));
     float y = 64f * sc;
     for (int c = 0; c < NCAT; c++)
     {

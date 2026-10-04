@@ -14,12 +14,26 @@ bool Scan()
 
         // multi-instance election: mark this PB, then check for other running instances.
         // Station beats ship; same class -> lowest EntityId wins. Loser goes standby.
-        if (!Me.CustomData.Contains(DUTC_MARKER)) Me.CustomData = DUTC_MARKER + "\n" + Me.CustomData;
+        // The marker carries a HEARTBEAT number that ticks while the script runs - a
+        // leftover marker on a PB that is not actually running the script stops
+        // ticking and gets ignored, so it can never lock a live instance into
+        // standby with a blank autocrafting screen (thanks Enig)
+        string myMark = "[DUTC-INV-ACTIVE:" + (cycles % 100000) + "]";
+        var mym = System.Text.RegularExpressions.Regex.Match(Me.CustomData, @"\[DUTC-INV-ACTIVE:?\d*\]");
+        if (mym.Success) Me.CustomData = Me.CustomData.Replace(mym.Value, myMark);
+        else Me.CustomData = myMark + "\n" + Me.CustomData;
         standby = false; masterName = "";
         var pbs = new List<IMyProgrammableBlock>();
-        GridTerminalSystem.GetBlocksOfType(pbs, p => p != Me && p.IsWorking && p.CustomData.Contains(DUTC_MARKER));
+        GridTerminalSystem.GetBlocksOfType(pbs, p => p != Me && p.IsWorking && p.CustomData.Contains("[DUTC-INV-ACTIVE"));
         foreach (var p in pbs)
         {
+            var om = System.Text.RegularExpressions.Regex.Match(p.CustomData, @"\[DUTC-INV-ACTIVE:?(\d*)\]");
+            string beat = om.Success ? om.Groups[1].Value : "?";
+            string lastB; beatSeen.TryGetValue(p.EntityId, out lastB);
+            int age; beatAge.TryGetValue(p.EntityId, out age);
+            if (beat == lastB) age++; else age = 0;
+            beatSeen[p.EntityId] = beat; beatAge[p.EntityId] = age;
+            if (age >= 5) continue;
             bool meStatic = Me.CubeGrid.IsStatic;
             bool otherStatic = p.CubeGrid.IsStatic;
             bool otherWins;

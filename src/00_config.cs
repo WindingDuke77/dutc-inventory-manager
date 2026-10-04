@@ -1,5 +1,5 @@
 // ========================================
-//         DUTC INVENTORY  v2.0.7
+//         DUTC INVENTORY  v2.0.8
 // ========================================
 // Sorting + even container balancing, auto container assignment, bottle filling
 // (works!), special loadout containers, autocrafting via Custom Data with sprite
@@ -105,6 +105,7 @@ double uraniumSmall = 25;           // per small-grid reactor
 bool assemblerCleanup = true;       // empty idle assemblers back into cargo
 bool feedAssemblers = true;         // pre-stock assembler inputs with the ingots their queue needs
 double feedQueueDepth = 100;        // stock ingots for this many queued crafts ahead
+bool balanceAssemblers = true;      // idle assemblers take over queued work from busy ones (only amounts this script queued)
 
 bool excludeWelders = true;         // don't drain welders (Build & Repair / Nanobot systems stock themselves)
 bool excludeGrinders = false;       // don't drain grinders
