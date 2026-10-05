@@ -87,6 +87,8 @@ Swap the script into an existing Isy's setup - nothing to rename:
 [list]
 [*][b]pause[/b] / [b]resume[/b] - stop / restart the script
 [*][b]reset[/b] - clear blueprint caches (run after adding new assemblers)
+[*][b]items <text>[/b] - list stock item ids matching the text (find the exact name for the autocrafting list)
+[*][b]bp <name>[/b] - probe a blueprint name and show which assembler types the script can see
 [/list]
 
 [h1]Requirements[/h1]

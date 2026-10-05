@@ -93,11 +93,13 @@ bool Craft()
             if (name.StartsWith("MyObjectBuilder_")) name = name.Substring(16);
             string val = l.Substring(eq + 1).Trim();
             string bpOv = "";
-            var mo = System.Text.RegularExpressions.Regex.Match(val, @"(?i)bp:([\w/]+)");
+            // BP: captures to the END of the line - modded blueprint subtypes can
+            // contain spaces, so put BP: last (thanks The Burger Buster)
+            var mo = System.Text.RegularExpressions.Regex.Match(val, @"(?i)bp:\s*(.+)$");
             if (mo.Success)
             {
-                bpOv = mo.Groups[1].Value; val = val.Replace(mo.Value, "");
-                // IIM lists print blueprints as full paths - keep only the subtype (thanks The Burger Buster)
+                bpOv = mo.Groups[1].Value.Trim(); val = val.Replace(mo.Value, "");
+                // IIM lists print blueprints as full paths - keep only the subtype
                 int sl = bpOv.LastIndexOf('/');
                 if (sl >= 0) bpOv = bpOv.Substring(sl + 1);
             }
@@ -259,6 +261,8 @@ void SetupCraftCD()
     sbcd.Append("#   D = disassemble the excess above the wanted amount (e.g. SteelPlate=1000D)\n");
     sbcd.Append("# Modded item stuck on NoBP? Force its blueprint: Name=100 BP:BlueprintSubtype\n");
     sbcd.Append("# Blueprint name unknown? Queue the item once by hand and hover it in the assembler's production queue.\n");
+    sbcd.Append("# Exact ITEM name unknown? Run the PB with argument:  items <part of the name>\n");
+    sbcd.Append("# BP: not resolving? Run the PB with argument:  bp <the blueprint name>\n");
     sbcd.Append("# New craftable items get added here automatically.\n");
     var have = new HashSet<string>();
     foreach (var p in craftLCDs)
@@ -572,6 +576,45 @@ int BpState(string name, out MyDefinitionId bp, bool deep)
     probePos.Remove(name);
     noBp.Add(name);
     return -1;
+}
+
+// PB argument "bp <name>": probe a blueprint name directly and show which
+// assembler types the script can see - takes the guesswork out of BP? rows
+void BpProbeCmd(string nm)
+{
+    var sb = new StringBuilder();
+    sb.Append("BP probe '" + nm + "'\nAssembler types (" + distinctAsm.Count + "):\n");
+    foreach (var d in distinctAsm)
+        sb.Append("  " + (d.BlockDefinition.SubtypeName == "" ? d.BlockDefinition.TypeIdString : d.BlockDefinition.SubtypeName) + "\n");
+    MyDefinitionId bp;
+    if (bpCache.TryGetValue(nm, out bp)) sb.Append("cached: " + bp.SubtypeName);
+    else if (TestBp(nm, out bp)) sb.Append("direct hit: " + bp.SubtypeName);
+    else
+    {
+        noBp.Remove(nm); quickMiss.Remove(nm); probePos.Remove(nm);
+        MyDefinitionId b2;
+        if (BpState(nm, out b2, false) == 1) sb.Append("found by pattern: " + b2.SubtypeName);
+        else sb.Append("no direct match. Caches for this name are cleared -\nset a wanted amount and the deep sweep retries it.\nNo assembler type listed above that should craft it?\nCheck it is on THIS grid, powered and not !manual.");
+    }
+    report = sb.ToString();
+}
+
+// PB argument "items <text>": list stock item ids matching the text, so the
+// exact SubtypeId for the autocrafting list is one command away
+void ItemsCmd(string f)
+{
+    var sb = new StringBuilder();
+    sb.Append("Items matching '" + f + "':\n");
+    int n = 0;
+    foreach (var kv in stock)
+    {
+        string full = kv.Key.TypeId.Replace("MyObjectBuilder_", "") + "/" + kv.Key.SubtypeId;
+        if (full.IndexOf(f, StringComparison.OrdinalIgnoreCase) < 0) continue;
+        sb.Append(full + "  x" + Math.Round(kv.Value) + "\n");
+        if (++n >= 20) { sb.Append("...more truncated"); break; }
+    }
+    if (n == 0) sb.Append("nothing in stock matches");
+    report = sb.ToString();
 }
 
 bool TestBp(string sub, out MyDefinitionId id)

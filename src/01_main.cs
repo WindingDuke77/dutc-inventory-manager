@@ -51,6 +51,7 @@ int cycles = 0;
 bool paused = false;
 bool standby = false;
 string masterName = "";
+string report = "";
 Dictionary<long,string> beatSeen = new Dictionary<long,string>();
 Dictionary<long,int> beatAge = new Dictionary<long,int>();
 string lastError = "";
@@ -92,10 +93,15 @@ public void Save()
 
 public void Main(string arg)
 {
-    arg = arg.Trim().ToLower();
+    string raw = arg.Trim();
+    arg = raw.ToLower();
     if (arg == "pause") paused = true;
     if (arg == "resume" || arg == "run") paused = false;
-    if (arg == "reset") { bpCache.Clear(); noBp.Clear(); probePos.Clear(); convCache.Clear(); reachCache.Clear(); barCache.Clear(); quickMiss.Clear(); catCache.Clear(); Storage = ""; lastError = ""; }
+    // diagnostics: "items <text>" lists matching stock item ids (case preserved),
+    // "bp <name>" probes a blueprint name against the visible assemblers
+    if (arg.StartsWith("items ")) ItemsCmd(raw.Substring(6).Trim());
+    if (arg.StartsWith("bp ")) BpProbeCmd(raw.Substring(3).Trim());
+    if (arg == "reset") { bpCache.Clear(); noBp.Clear(); probePos.Clear(); convCache.Clear(); reachCache.Clear(); barCache.Clear(); quickMiss.Clear(); catCache.Clear(); Storage = ""; lastError = ""; report = ""; }
     tick++;
     Echo("DUTC INVENTORY " + "|/-\\"[tick % 4]);
     Echo("Step: " + stepNames[step]);
@@ -103,6 +109,7 @@ public void Main(string arg)
     Echo("Warnings: " + warnings.Count);
     if (standby) Echo("STANDBY - sorting handled by:\n" + masterName);
     if (lastError != "") Echo("Last error: " + lastError);
+    if (report != "") Echo("\n" + report);
     if (paused) { Echo("PAUSED - run with 'resume'"); return; }
     try
     {

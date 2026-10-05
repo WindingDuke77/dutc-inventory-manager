@@ -1,5 +1,5 @@
 // ========================================
-//         DUTC INVENTORY  v2.0.9
+//         DUTC INVENTORY  v2.0.10
 // ========================================
 // Sorting + even container balancing, auto container assignment, bottle filling
 // (works!), special loadout containers, autocrafting via Custom Data with sprite
@@ -29,6 +29,8 @@
 //      Autocrafting                   = stock screen, edit wanted amounts in its CUSTOM DATA
 //    Cockpit screens: DUTC-main:1 = second screen, :2 = third, etc.
 // 4. Arguments (optional): pause / resume / reset
+//      items <text>  = list stock item ids matching the text (find exact names)
+//      bp <name>     = probe a blueprint name + show visible assembler types
 // 5. Multiple grids each running this script can dock safely: they elect ONE
 //    active manager automatically (station beats ship, then lowest id wins).
 //    The other instance goes standby but keeps its screens and machine refills.

@@ -209,13 +209,29 @@ void FeedAssemblers()
                 need[ingotNames[i]] = v + costs[i] * amt;
             }
         }
+        // volume-capped, PROPORTIONAL feeding: never flood the input with the first
+        // ingredient on the list so the others can't get in, and push back an
+        // ingredient that has already flooded it (thanks The Burger Buster -
+        // 230 gravity comps = 7.5k iron and four stalled assemblers)
+        double totalKg = 0;
+        foreach (var kv in need) totalKg += kv.Value;
+        if (totalKg <= 0) continue;
+        double freeKg = ((double)inv.MaxVolume - (double)inv.CurrentVolume) * 1000.0 / 0.45;
+        double scale = Math.Min(1.0, freeKg * 0.75 / totalKg);
         foreach (var kv in need)
         {
             if (Runtime.CurrentInstructionCount > 28000) return;
             var t = MyItemType.MakeIngot(kv.Key);
+            double target = kv.Value * scale;
             double have = (double)inv.GetItemAmount(t);
-            if (have >= kv.Value - 0.5) continue;
-            PullTo(inv, t, kv.Value - have, a);
+            if (have > target * 1.5 + 100)
+            {
+                var w = DestFor(INGOT, a);
+                if (w != null) PushFrom(inv, t, have - target, w.GetInventory(0));
+                continue;
+            }
+            if (have >= target - 0.5) continue;
+            PullTo(inv, t, target - have, a);
         }
     }
 }
