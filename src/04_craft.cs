@@ -38,8 +38,16 @@ List<CRow> craftRows = new List<CRow>();
 bool Craft()
 {
     if (!enableAutocrafting || craftLCDs.Count == 0) return true;
-    var master = craftLCDs[0];
-    if (!master.CustomData.Contains(CRAFT_MARKER)) SetupCraftCD();
+    // the master list is the panel CARRYING THE MARKER, not whichever sorts first.
+    // The 2.0.6 panel reordering could crown a second master, leaving two competing
+    // lists - edits on one were silently shadowed by stale duplicates on the other
+    // (thanks The Burger Buster). Stray markers get retired on sight.
+    IMyTextPanel master = null;
+    foreach (var p in craftLCDs) if (p.CustomData.Contains(CRAFT_MARKER)) { master = p; break; }
+    if (master == null) { master = craftLCDs[0]; SetupCraftCD(master); }
+    foreach (var p in craftLCDs)
+        if (p != master && p.CustomData.Contains(CRAFT_MARKER))
+            p.CustomData = p.CustomData.Replace(CRAFT_MARKER, "# list lives on the marker panel now");
     // no assembler is no reason for a BLANK screen - draw it and say why (thanks Enig)
     if (assemblers.Count == 0) { Warn("Autocrafting: no usable assemblers!"); craftRows.Clear(); DrawCraftScreens(); return true; }
     probeBudget = 1;
@@ -79,7 +87,11 @@ bool Craft()
     }
     var entries = new List<string[]>();
     var seen = new HashSet<string>();
-    foreach (var p in craftLCDs)
+    // master parses FIRST: its values always win over leftovers on other panels
+    var panels = new List<IMyTextPanel>();
+    panels.Add(master);
+    foreach (var p in craftLCDs) if (p != master) panels.Add(p);
+    foreach (var p in panels)
     {
         foreach (var raw in p.CustomData.Split('\n'))
         {
@@ -163,12 +175,14 @@ bool Craft()
         }
         MyDefinitionId bp;
         // deep blueprint searching only for items someone actually WANTS - inventory
-        // clutter (raw meats, carcasses...) never triggers the sweep (thanks Oxnard)
-        int st = BpState(name, out bp, want > 0);
+        // clutter (raw meats, carcasses...) never triggers the sweep (thanks Oxnard).
+        // A D row needs its blueprint even at want=0 (melt everything).
+        bool hasD = mods.Contains("D");
+        int st = BpState(name, out bp, want > 0 || hasD);
         // a BP: override that didn't resolve shows as BP? - the override name is
         // wrong or no present assembler accepts it (thanks The Burger Buster)
         if (st != 1 && ovFail) { craftRows.Add(new CRow { name = name, cur = cur, want = want, state = -4 }); continue; }
-        if (st == 0 && want <= 0) { craftRows.Add(new CRow { name = name, cur = cur, want = want, state = 0 }); continue; }
+        if (st == 0 && want <= 0 && !hasD) { craftRows.Add(new CRow { name = name, cur = cur, want = want, state = 0 }); continue; }
         if (st == 0) { craftRows.Add(new CRow { name = name, cur = cur, want = want, state = -3 }); continue; }
         if (st == -1) { craftRows.Add(new CRow { name = name, cur = cur, want = want, state = -1 }); continue; }
         double inQ; queued.TryGetValue(bp, out inQ);
@@ -191,9 +205,10 @@ bool Craft()
             inQ = Math.Max(0, inQ - removed);
             queued[bp] = inQ;
         }
-        // D modifier: melt the surplus back down (thanks PriorityZer0 + aantono)
+        // D modifier: melt the surplus back down (thanks PriorityZer0 + aantono).
+        // Works at want=0 too: Item=0D means keep none, melt everything (thanks The Burger Buster)
         double disQ = 0;
-        if (allowDisassembly && mods.Contains("D") && want > 0)
+        if (allowDisassembly && hasD)
         {
             disQ = DisQueueOf(bp);
             if (cur > want * (1 + craftMargin))
@@ -251,9 +266,8 @@ void RebalanceAsm()
 }
 
 // First-time setup: header, migrate old text-format entries (v1.1 / IIM), prefill vanilla craftables.
-void SetupCraftCD()
+void SetupCraftCD(IMyTextPanel master)
 {
-    var master = craftLCDs[0];
     var sbcd = new StringBuilder();
     sbcd.Append(CRAFT_MARKER + "\n");
     sbcd.Append("# Edit the number = wanted stock. The screen only displays status.\n");

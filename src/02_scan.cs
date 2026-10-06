@@ -193,12 +193,19 @@ bool Count()
     countPass = 0;
     stock.Clear();
     foreach (var kv in stockTmp) stock[kv.Key] = kv.Value;
+    // a crop and its seed pack share one SubtypeId under different types - the
+    // bare name must ALWAYS mean the non-seed item and never flip between the
+    // two with dictionary order, or counts oscillate forever (thanks Oxnard).
+    // Seeds are reachable by their qualified name: SeedItem/Mushroom
     byName.Clear();
     foreach (var t in stock.Keys)
     {
-        byName[t.SubtypeId] = t;
-        byName[t.TypeId.Replace("MyObjectBuilder_", "") + "/" + t.SubtypeId] = t;
+        string shortTy = t.TypeId.Replace("MyObjectBuilder_", "");
+        if (shortTy != "SeedItem" && shortTy != "Seed" && shortTy != "Seeds") byName[t.SubtypeId] = t;
+        byName[shortTy + "/" + t.SubtypeId] = t;
     }
+    foreach (var t in stock.Keys)
+        if (!byName.ContainsKey(t.SubtypeId)) byName[t.SubtypeId] = t;
     return true;
 }
 
