@@ -12,8 +12,13 @@ Dictionary<string,string> knownBp = new Dictionary<string,string>
 {
     { "AQD_Comp_Concrete", "AQD_BP_StoneIngot_To_Concrete" },
     { "DeuteriumContainmentUnit", "IceToDeuterium" },             // Star Trek Mod Pack (thanks Jasper + aantono)
-    { "AntideuteriumContainmentUnit", "IceToAntideuterium" }
+    { "AntideuteriumContainmentUnit", "IceToAntideuterium" },
+    { "ATLASAmmoMagazine", "40mmATLASBP" }                        // Aryx Weapon Enterprises (thanks The Burger Buster)
 };
+// blueprints seen queued by hand in any assembler, newest first - the script
+// adopts them for matching items, Isy style (thanks The Burger Buster)
+List<MyDefinitionId> learnedBps = new List<MyDefinitionId>();
+HashSet<MyDefinitionId> learnedSet = new HashSet<MyDefinitionId>();
 // per-name sweep progress: interrupted scans RESUME instead of restarting, so
 // uncraftable items (Fruit...) always reach a final NoBP verdict (thanks Oxnard)
 Dictionary<string,int> probePos = new Dictionary<string,int>();
@@ -76,6 +81,11 @@ bool Craft()
         {
             double amt; queued.TryGetValue(pi.BlueprintId, out amt);
             queued[pi.BlueprintId] = amt + (double)pi.Amount;
+            if (learnedSet.Add(pi.BlueprintId))
+            {
+                learnedBps.Insert(0, pi.BlueprintId);
+                if (learnedBps.Count > 100) { learnedSet.Remove(learnedBps[100]); learnedBps.RemoveAt(100); }
+            }
         }
     }
     // crafts completed since last pass: shrink our tracker to what is actually queued
@@ -103,6 +113,7 @@ bool Craft()
             // pasted full paths work too: "MyObjectBuilder_SeedItem/Grain" counts the
             // SEEDS, not the crop - without this the processor loops forever (thanks Froman Joe)
             if (name.StartsWith("MyObjectBuilder_")) name = name.Substring(16);
+            if (name.Equals("UIScale", StringComparison.OrdinalIgnoreCase)) continue;
             string val = l.Substring(eq + 1).Trim();
             string bpOv = "";
             // BP: captures to the END of the line - modded blueprint subtypes can
@@ -186,7 +197,9 @@ bool Craft()
         if (st == 0) { craftRows.Add(new CRow { name = name, cur = cur, want = want, state = -3 }); continue; }
         if (st == -1) { craftRows.Add(new CRow { name = name, cur = cur, want = want, state = -1 }); continue; }
         double inQ; queued.TryGetValue(bp, out inQ);
-        if (want > 0 && cur < want * (1 - craftMargin))
+        // craft to the EXACT quota - the old 5% margin stopped short and sat green
+        // at 4892/5000 (thanks Oxnard + The Burger Buster)
+        if (want > 0 && cur + inQ < want - 0.01)
         {
             double need = want - cur - inQ;
             if (need >= 1)
@@ -320,15 +333,15 @@ void DrawCraftScreens()
     for (int p = 0; p < craftLCDs.Count; p++)
     {
         bool last = p == craftLCDs.Count - 1;
-        start += DrawCraftPanel(craftLCDs[p], p, start, last);
+        start += DrawCraftPanel(craftLCDs[p], p, start, last, UiScaleFor(craftLCDs[p]));
     }
 }
 
-int DrawCraftPanel(IMyTextSurface s, int index, int start, bool last)
+int DrawCraftPanel(IMyTextSurface s, int index, int start, bool last, float us)
 {
     var f = Begin(s);
     Vector2 size = s.SurfaceSize, off = (s.TextureSize - size) * 0.5f;
-    float W = size.X, H = size.Y, sc = Math.Min(W, H) / 512f * UI_SCALE;
+    float W = size.X, H = size.Y, sc = Math.Min(W, H) / 512f * us;
     string hd = "DUTC AUTOCRAFTING" + (craftLCDs.Count > 1 ? " " + (index + 1) + "/" + craftLCDs.Count : "");
     f.Add(Txt(hd, off + new Vector2(W * 0.5f, 10f * sc), 1.05f * sc, UI_DIM));
     int okC = 0, craftC = 0, lowC = 0, nobpC = 0, chkC = 0;
@@ -338,7 +351,7 @@ int DrawCraftPanel(IMyTextSurface s, int index, int start, bool last)
         else if (r.state == -3) chkC++;
         else if (r.state == 0 && r.want > 0)
         {
-            if (r.cur >= r.want * (1 - craftMargin)) okC++;
+            if (r.cur >= r.want - 0.5) okC++;
             else if (r.inQ > 0) craftC++;
             else lowC++;
         }
@@ -382,7 +395,8 @@ int DrawCraftPanel(IMyTextSurface s, int index, int start, bool last)
         else
         {
             frac = r.want > 0 ? Math.Min(1, r.cur / r.want) : -1;
-            col = r.want <= 0 ? UI_DIM : r.cur >= r.want * (1 - craftMargin) ? (r.disQ > 0 ? UI_WARNC : UI_GOOD) : r.inQ > 0 ? UI_WARNC : UI_BAD;
+            // green means the FULL quota, not "within 5%" (thanks Oxnard + The Burger Buster)
+            col = r.want <= 0 ? UI_DIM : r.cur >= r.want - 0.5 ? (r.disQ > 0 ? UI_WARNC : UI_GOOD) : r.inQ > 0 ? UI_WARNC : UI_BAD;
             valTxt = Num(r.cur) + " / " + Num(r.want) + (r.inQ > 0 ? " +" + Math.Round(r.inQ) : "") + (r.disQ > 0 ? " -" + Math.Round(r.disQ) : "");
         }
         f.Add(Txt(TruncS(r.name, maxChars), off + new Vector2(W * 0.05f, y), 0.6f * sc, UI_TEXT, TextAlignment.LEFT));
@@ -554,6 +568,21 @@ int BpState(string name, out MyDefinitionId bp, bool deep)
     candidates.Add(core + "_ApexSurvivalAdditions"); candidates.Add(baseN + "_ApexSurvivalAdditions");
     foreach (var s in candidates)
         if (TestBp(s, out bp)) { bpCache[name] = bp; return 1; }
+    // blueprints LEARNED from hand-queued crafts: adopt one whose core name matches
+    // this item's - queue a stubborn modded item once and the script picks its
+    // blueprint up by itself, Isy style (thanks The Burger Buster)
+    string coreN = BpCore(baseN).ToUpper();
+    if (coreN.Length >= 5)
+    {
+        foreach (var lb in learnedBps)
+        {
+            string lc = BpCore(lb.SubtypeName).ToUpper();
+            if (lc.Length < 4) continue;
+            if (lc != coreN && !lc.Contains(coreN) && !coreN.Contains(lc)) continue;
+            MyDefinitionId t2;
+            if (TestBp(lb.SubtypeName, out t2)) { bpCache[name] = t2; return 1; }
+        }
+    }
     if (!deep) return 0;
     if (probeBudget <= 0 || Runtime.CurrentInstructionCount > 28000) return 0;
     probeBudget--;
@@ -590,6 +619,32 @@ int BpState(string name, out MyDefinitionId bp, bool deep)
     probePos.Remove(name);
     noBp.Add(name);
     return -1;
+}
+
+// strip the decorations mods put around the shared core of an item and its
+// blueprint: "ATLASAmmoMagazine" and "40mmATLASBP" both reduce to "ATLAS"
+string BpCore(string s)
+{
+    s = System.Text.RegularExpressions.Regex.Replace(s, @"(?i)^(Position\d+_|\d+mm)", "");
+    for (int i = 0; i < 2; i++)
+        s = System.Text.RegularExpressions.Regex.Replace(s, @"(?i)(AmmoMagazine|MagDef|Magazine|Component|Ammo|Item|Mag|Def|BP)$", "");
+    return s;
+}
+
+// PB argument "bps": blueprints seen queued in your assemblers, newest first -
+// queue a stubborn item once by hand and copy its exact blueprint name from here
+void BpsCmd()
+{
+    var sb = new StringBuilder();
+    sb.Append("Blueprints seen in assembler queues:\n");
+    int n = 0;
+    foreach (var b in learnedBps)
+    {
+        sb.Append(b.SubtypeName + "\n");
+        if (++n >= 20) { sb.Append("...more truncated"); break; }
+    }
+    if (n == 0) sb.Append("none yet - queue something by hand first");
+    report = sb.ToString();
 }
 
 // PB argument "bp <name>": probe a blueprint name directly and show which

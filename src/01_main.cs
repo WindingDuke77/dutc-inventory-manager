@@ -101,7 +101,8 @@ public void Main(string arg)
     // "bp <name>" probes a blueprint name against the visible assemblers
     if (arg.StartsWith("items ")) ItemsCmd(raw.Substring(6).Trim());
     if (arg.StartsWith("bp ")) BpProbeCmd(raw.Substring(3).Trim());
-    if (arg == "reset") { bpCache.Clear(); noBp.Clear(); probePos.Clear(); convCache.Clear(); reachCache.Clear(); barCache.Clear(); quickMiss.Clear(); catCache.Clear(); Storage = ""; lastError = ""; report = ""; }
+    if (arg == "bps") BpsCmd();
+    if (arg == "reset") { bpCache.Clear(); noBp.Clear(); probePos.Clear(); convCache.Clear(); reachCache.Clear(); barCache.Clear(); quickMiss.Clear(); catCache.Clear(); learnedBps.Clear(); learnedSet.Clear(); Storage = ""; lastError = ""; report = ""; }
     tick++;
     Echo("DUTC INVENTORY " + "|/-\\"[tick % 4]);
     Echo("Step: " + stepNames[step]);

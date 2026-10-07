@@ -28,6 +28,16 @@ class UiRow
     public Color col;
 }
 
+// per-screen size override: "UIScale=0.8" in the block's Custom Data wins over
+// the global UI_SCALE (thanks gUtt)
+float UiScaleFor(IMyTerminalBlock b)
+{
+    var m = System.Text.RegularExpressions.Regex.Match(b.CustomData, @"(?i)uiscale\s*=\s*(\d+[\.,]?\d*)");
+    float f;
+    if (m.Success && float.TryParse(m.Groups[1].Value.Replace(',', '.'), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out f) && f > 0.2f && f < 4f) return f;
+    return UI_SCALE;
+}
+
 bool Screens()
 {
     // many screens on a big base: drawing resumes next tick instead of overrunning
@@ -39,9 +49,9 @@ bool Screens()
         {
             if (i++ < scrPos) continue;
             if (Runtime.CurrentInstructionCount > 30000) { scrPos = i - 1; return false; }
-            if (g == 0) { var s = SurfaceFor(b, MAIN_TAGS); if (s != null) DrawMain(s); }
-            else if (g == 1) { var s = SurfaceFor(b, WARN_TAGS); if (s != null) DrawList(s, "WARNINGS", WarnRows(), true); }
-            else if (g == 2) { var s = SurfaceFor(b, ACT_TAGS); if (s != null) DrawList(s, "ACTIONS", ActRows(), true); }
+            if (g == 0) { var s = SurfaceFor(b, MAIN_TAGS); if (s != null) DrawMain(s, UiScaleFor(b)); }
+            else if (g == 1) { var s = SurfaceFor(b, WARN_TAGS); if (s != null) DrawList(s, "WARNINGS", WarnRows(), true, UiScaleFor(b)); }
+            else if (g == 2) { var s = SurfaceFor(b, ACT_TAGS); if (s != null) DrawList(s, "ACTIONS", ActRows(), true, UiScaleFor(b)); }
             else WriteInv(b);
         }
     }
@@ -49,11 +59,11 @@ bool Screens()
     return true;
 }
 
-void DrawMain(IMyTextSurface s)
+void DrawMain(IMyTextSurface s, float us)
 {
     var f = Begin(s);
     Vector2 size = s.SurfaceSize, off = (s.TextureSize - size) * 0.5f;
-    float W = size.X, H = size.Y, sc = Math.Min(W, H) / 512f * UI_SCALE;
+    float W = size.X, H = size.Y, sc = Math.Min(W, H) / 512f * us;
     // all vertical spacing in PIXELS so tall/vertical LCDs don't stretch rows apart (thanks VFox32)
     f.Add(Txt("DUTC INVENTORY", off + new Vector2(W * 0.5f, 10f * sc), 1.15f * sc, UI_DIM));
     f.Add(Txt(("" + "|/-\\"[tick % 4]), off + new Vector2(W * 0.95f, 10f * sc), 1.0f * sc, UI_DIM, TextAlignment.RIGHT));
@@ -106,11 +116,11 @@ void DrawMain(IMyTextSurface s)
 
 // Generic scrolling list screen. Scrolls automatically when content overflows.
 // Vertical spacing in PIXELS so tall/vertical LCDs don't stretch rows apart (thanks VFox32)
-void DrawList(IMyTextSurface s, string title, List<UiRow> rows, bool scrollOn)
+void DrawList(IMyTextSurface s, string title, List<UiRow> rows, bool scrollOn, float us)
 {
     var f = Begin(s);
     Vector2 size = s.SurfaceSize, off = (s.TextureSize - size) * 0.5f;
-    float W = size.X, H = size.Y, sc = Math.Min(W, H) / 512f * UI_SCALE;
+    float W = size.X, H = size.Y, sc = Math.Min(W, H) / 512f * us;
     f.Add(Txt("DUTC " + title, off + new Vector2(W * 0.5f, 10f * sc), 1.05f * sc, UI_DIM));
     f.Add(Box(off + new Vector2(W * 0.5f, 46f * sc), new Vector2(W * 0.9f, 2f * sc), UI_FRAME));
     float rowPx = 26f * sc;
@@ -204,7 +214,7 @@ void WriteInv(IMyTerminalBlock b)
         if (s == null) return;
         if (b.CustomData.Trim().Length == 0)
             b.CustomData = "# DUTC-inv screen\n# One filter per line (type, item name or regex):\n#   Ore   Ingot   Component   AmmoMagazine\n#   SteelPlate   Iron   NATO\n# Options after the filter:\n#   <number> = bar max   noBar   hideEmpty   hideType   noHeading   noScroll\nComponent\n";
-        RenderInv(s, b.CustomData.Split('\n'));
+        RenderInv(s, b.CustomData.Split('\n'), UiScaleFor(b));
         return;
     }
     for (int i = 0; i < secIdx.Count; i++)
@@ -213,11 +223,11 @@ void WriteInv(IMyTerminalBlock b)
         if (prov != null && secIdx[i] < prov.SurfaceCount) s = prov.GetSurface(secIdx[i]);
         else s = b as IMyTextSurface;
         if (s == null) continue;
-        RenderInv(s, secLines[i].ToArray());
+        RenderInv(s, secLines[i].ToArray(), UiScaleFor(b));
     }
 }
 
-void RenderInv(IMyTextSurface s, string[] lines)
+void RenderInv(IMyTextSurface s, string[] lines, float us)
 {
     bool noScroll = false;
     var rows = new List<UiRow>();
@@ -288,7 +298,7 @@ void RenderInv(IMyTextSurface s, string[] lines)
         rows.Add(new UiRow { kind = 2, name = "Or clear Custom Data completely", col = UI_TEXT });
         rows.Add(new UiRow { kind = 2, name = "for an automatic template.", col = UI_TEXT });
     }
-    DrawList(s, "ITEM STOCK", rows, !noScroll);
+    DrawList(s, "ITEM STOCK", rows, !noScroll, us);
 }
 
 bool MatchItem(MyItemType t, string filt)

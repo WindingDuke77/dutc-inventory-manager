@@ -1,5 +1,5 @@
 // ========================================
-//         DUTC INVENTORY  v2.0.11
+//         DUTC INVENTORY  v2.0.12
 // ========================================
 // Sorting + even container balancing, auto container assignment, bottle filling
 // (works!), special loadout containers, autocrafting via Custom Data with sprite
@@ -31,6 +31,7 @@
 // 4. Arguments (optional): pause / resume / reset
 //      items <text>  = list stock item ids matching the text (find exact names)
 //      bp <name>     = probe a blueprint name + show visible assembler types
+//      bps           = list blueprints seen queued by hand (exact names to copy)
 // 5. Multiple grids each running this script can dock safely: they elect ONE
 //    active manager automatically (station beats ship, then lowest id wins).
 //    The other instance goes standby but keeps its screens and machine refills.
@@ -77,6 +78,7 @@ int bottleRefillEvery = 30;         // every N script cycles (~2s per cycle); on
 string[] tankableBottles = { "HydrogenBottle", "OxygenBottle" };
 
 float UI_SCALE = 1.0f;              // sprite screen size multiplier (bigger text = fewer rows per screen)
+                                    // per-screen override: put "UIScale=0.8" in that block's Custom Data
 
 bool enableAutocrafting = true;
 string CRAFT_KEY = "Autocrafting";  // LCD name keyword for the autocrafting screen(s)
@@ -85,7 +87,7 @@ string CRAFT_KEY = "Autocrafting";  // LCD name keyword for the autocrafting scr
 // deep modded-blueprint search needs NO setup: it runs automatically for any item
 // whose wanted amount is above zero, and every result is remembered in Storage
 // (survives recompiles and world reloads). Force one manually: Name=100 BP:Blueprint
-double craftMargin = 0.05;          // 5% - craft when below wanted*(1-margin)
+double craftMargin = 0.05;          // D rows melt only above wanted*(1+margin); crafting always tops up to the EXACT quota
 bool allowDisassembly = true;       // D modifier (Name=1000D): disassemble the excess above the wanted amount
 
 bool feedRefineries = true;         // keep refineries loaded with ore
