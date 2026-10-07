@@ -14,6 +14,7 @@ Issues and pull requests welcome - most fixes in this script came from the commu
 [*][b]Auto container assignment[/b] - type full or missing? Biggest free cargo gets tagged automatically
 [*][b]Bottle refilling that works[/b] - bottles route through tanks with gas, and bottles already stored get topped up too
 [*][b]Autocrafting[/b] - wanted amounts live in the LCD's Custom Data (prefilled with every craftable item). Colored status screen: green = stocked, amber = crafting, red = low
+[*][b]Blueprint learning[/b] - queue a stubborn modded item once by hand and the script adopts its blueprint automatically, Isy style
 [*][b]Disassembling[/b] - add D behind the wanted amount (SteelPlate=1000D) and the excess gets melted back down automatically
 [*][b]Refinery management[/b] - auto-fed by ore priority (Stone first by default), ore balanced evenly across refineries, priority ore moved to the front of the queue
 [*][b]Assembler feeding[/b] - queued assemblers get pre-stocked with the exact ingots their queue needs, volume-capped and proportional so one ingredient can never flood the input and stall the queue
@@ -21,7 +22,7 @@ Issues and pull requests welcome - most fixes in this script came from the commu
 [*][b]Ice balancing[/b] - even split across O2/H2 generators, with space reserved for bottles
 [*][b]Uranium balancing[/b] - fixed amount per reactor (100 large / 25 small), conveyors auto-managed
 [*][b]Assembler cleanup[/b] - idle assemblers get emptied back into cargo
-[*][b]Sprite LCDs[/b] - dark flat UI with colored bars on every screen, auto-scrolling when content overflows
+[*][b]Sprite LCDs[/b] - dark flat UI with colored bars on every screen, auto-scrolling when content overflows, per-screen size override
 [*][b]Special containers[/b] - per-container loadouts with Normal / Minimum / Limiter / All modes
 [*][b]Performance friendly[/b] - work is spread over small resumable steps, transfers capped per tick, safe on 1000+ inventory bases
 [*][b]No warning spam[/b] - storage blocks without conveyor ports (armories, lockers, freight racks) are skipped silently
