@@ -58,6 +58,7 @@ Stubborn modded item? Force its blueprint (BP: last on the line, spaces allowed)
 Better: the script [b]learns from your assemblers[/b] - queue a stubborn modded item once by hand and its blueprint gets picked up automatically (run the PB with argument [b]bps[/b] to see every learned blueprint name verbatim).
 Find the exact ITEM name: run the PB with argument [b]items <part of the name>[/b]. Test a blueprint name: argument [b]bp <name>[/b]. A wrong BP: name shows [b]BP?[/b] on the screen.
 [b][NoBP][/b] on screen = no assembler can craft that item (modded or not craftable).
+Quotas count the BASE stock: items on docked ships don't satisfy them (they leave with the ship). Turret contents and Special containers count by default - all three are config switches (craftCountDocked / craftCountGuns / craftCountSpecials).
 Deep blueprint searching needs no setup: it runs automatically for any item with a wanted amount above zero, and every blueprint it finds (or rules out) is remembered in the PB's Storage across recompiles and world reloads. Uncraftable loot sitting in cargo costs nothing.
 Multiple screens? Name them [b]Autocrafting 1[/b], [b]Autocrafting 2[/b]... - the list flows in that order.
 

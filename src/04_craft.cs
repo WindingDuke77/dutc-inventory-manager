@@ -175,7 +175,7 @@ bool Craft()
         string name = e[0]; string mods = e[2];
         double want; double.TryParse(e[1], out want);
         MyItemType t;
-        double cur = byName.TryGetValue(name, out t) ? CountOf(t) : 0;
+        double cur = byName.TryGetValue(name, out t) ? CountOfCraft(t) : 0;
         if (mods.Contains("I")) { craftRows.Add(new CRow { name = name, cur = cur, want = want, state = -2 }); continue; }
         bool ovFail = false;
         if (e[3] != "" && !bpCache.ContainsKey(name))

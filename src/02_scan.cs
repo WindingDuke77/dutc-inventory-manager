@@ -168,7 +168,7 @@ bool ContainsAny(string s, string[] tags)
 // in stockTmp and only replace the live stock once the pass is complete.
 bool Count()
 {
-    if (countPass == 0 && countPos == 0) stockTmp.Clear();
+    if (countPass == 0 && countPos == 0) { stockTmp.Clear(); stockTmpC.Clear(); }
     var items = new List<MyInventoryItem>();
     while (countPass < 2)
     {
@@ -178,6 +178,12 @@ bool Count()
             if (Runtime.CurrentInstructionCount > 32000) return false;
             var b = list[countPos];
             if (b.CustomName.Contains(HIDDEN_KEY)) continue;
+            // craftStock is what autocraft quotas see: by default docked ships don't
+            // count (their stock leaves with them), turrets and Specials are
+            // configurable (thanks Papa Murderdolls)
+            bool forCraft = (craftCountDocked || b.IsSameConstructAs(Me))
+                && (craftCountGuns || !(b is IMyUserControllableGun))
+                && (countPass == 0 || craftCountSpecials);
             for (int q = 0; q < b.InventoryCount; q++)
             {
                 items.Clear(); b.GetInventory(q).GetItems(items);
@@ -185,6 +191,7 @@ bool Count()
                 {
                     double a = (double)it.Amount;
                     if (stockTmp.ContainsKey(it.Type)) stockTmp[it.Type] += a; else stockTmp[it.Type] = a;
+                    if (forCraft) { if (stockTmpC.ContainsKey(it.Type)) stockTmpC[it.Type] += a; else stockTmpC[it.Type] = a; }
                 }
             }
         }
@@ -193,6 +200,8 @@ bool Count()
     countPass = 0;
     stock.Clear();
     foreach (var kv in stockTmp) stock[kv.Key] = kv.Value;
+    craftStock.Clear();
+    foreach (var kv in stockTmpC) craftStock[kv.Key] = kv.Value;
     // a crop and its seed pack share one SubtypeId under different types - the
     // bare name must ALWAYS mean the non-seed item and never flip between the
     // two with dictionary order, or counts oscillate forever (thanks Oxnard).

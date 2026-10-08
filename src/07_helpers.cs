@@ -184,6 +184,8 @@ double PushFrom(IMyInventory src, MyItemType t, double amount, IMyInventory dst)
 }
 
 double CountOf(MyItemType t) { double v; stock.TryGetValue(t, out v); return v; }
+// what autocraft quotas see (docked ships / turrets / specials filtered per config)
+double CountOfCraft(MyItemType t) { double v; craftStock.TryGetValue(t, out v); return v; }
 
 // Nanobot Build & Repair blocks manage their own inventory - never touch them
 Dictionary<long,bool> barCache = new Dictionary<long,bool>();

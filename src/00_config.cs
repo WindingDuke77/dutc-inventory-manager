@@ -1,5 +1,5 @@
 // ========================================
-//         DUTC INVENTORY  v2.0.12
+//         DUTC INVENTORY  v2.0.13
 // ========================================
 // Sorting + even container balancing, auto container assignment, bottle filling
 // (works!), special loadout containers, autocrafting via Custom Data with sprite
@@ -89,6 +89,10 @@ string CRAFT_KEY = "Autocrafting";  // LCD name keyword for the autocrafting scr
 // (survives recompiles and world reloads). Force one manually: Name=100 BP:Blueprint
 double craftMargin = 0.05;          // D rows melt only above wanted*(1+margin); crafting always tops up to the EXACT quota
 bool allowDisassembly = true;       // D modifier (Name=1000D): disassemble the excess above the wanted amount
+// what counts toward autocraft quotas (sorting and the DUTC-inv screens always see everything):
+bool craftCountDocked = false;      // items on DOCKED ships don't satisfy base quotas - they leave with the ship (thanks Papa Murderdolls)
+bool craftCountGuns = true;         // ammo already loaded in turrets and fixed guns counts
+bool craftCountSpecials = true;     // items inside Special containers count
 
 bool feedRefineries = true;         // keep refineries loaded with ore
 bool balanceRefineries = true;      // equalize each ore across all refineries
