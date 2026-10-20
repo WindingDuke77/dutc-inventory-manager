@@ -190,6 +190,11 @@ bool Craft()
 
     craftRows.Clear();
     ingotTarget.Clear();
+    // two rows can resolve to the SAME blueprint (hand-written row + auto-added
+    // name variant of a seed). Only the FIRST row may manage that queue, or the
+    // dormant duplicate cancels the real row's queue every cycle - "queued my
+    // Vegetable Seeds once after a reinstall, then never again"
+    var rowBp = new HashSet<MyDefinitionId>();
     foreach (var e in entries)
     {
         string name = e[0]; string mods = e[2];
@@ -226,9 +231,10 @@ bool Craft()
         if (st == 0) { craftRows.Add(new CRow { name = name, cur = cur, want = want, state = -3 }); continue; }
         if (st == -1) { craftRows.Add(new CRow { name = name, cur = cur, want = want, state = -1 }); continue; }
         double inQ; queued.TryGetValue(bp, out inQ);
+        bool manage = rowBp.Add(bp);
         // craft to the EXACT quota - the old 5% margin stopped short and sat green
         // at 4892/5000 (thanks Oxnard + The Burger Buster)
-        if (want > 0 && cur + inQ < want - 0.01)
+        if (manage && want > 0 && cur + inQ < want - 0.01)
         {
             double need = want - cur - inQ;
             if (need >= 1)
@@ -241,7 +247,9 @@ bool Craft()
                 Act("Queued " + Math.Round(need) + " " + name);
             }
         }
-        else if (cur >= want && inQ > 0)
+        // a row with NO wanted amount never cancels anything: cur >= 0 is always
+        // true, so a want=0 duplicate used to strip the sibling row's queue
+        else if (manage && want > 0 && cur >= want && inQ > 0)
         {
             double removed = RemoveBp(bp);
             inQ = Math.Max(0, inQ - removed);
@@ -250,7 +258,7 @@ bool Craft()
         // D modifier: melt the surplus back down (thanks PriorityZer0 + aantono).
         // Works at want=0 too: Item=0D means keep none, melt everything (thanks The Burger Buster)
         double disQ = 0;
-        if (allowDisassembly && hasD)
+        if (manage && allowDisassembly && hasD)
         {
             disQ = DisQueueOf(bp);
             if (cur > want * (1 + craftMargin))
