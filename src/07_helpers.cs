@@ -17,7 +17,9 @@ int CatCalc(MyItemType t)
 {
     foreach (var s in foodItems) if (t.SubtypeId == s) return FOOD;
     string ty = t.TypeId;
-    if (ty.EndsWith("_Ore")) return ORE;
+    // ice only becomes its own category when an "Ice" container exists -
+    // otherwise it stays an Ore, exactly like before
+    if (ty.EndsWith("_Ore")) return hadIce && IsIce(t) ? ICE : ORE;
     if (ty.EndsWith("_Ingot")) return INGOT;
     if (ty.EndsWith("_Component")) return COMP;
     if (ty.EndsWith("_AmmoMagazine")) return AMMO;

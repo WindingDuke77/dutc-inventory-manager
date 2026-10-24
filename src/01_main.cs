@@ -1,6 +1,7 @@
 // ---------- MAIN: state, entry point, step machine ----------
 
-const int ORE=0, INGOT=1, COMP=2, TOOL=3, AMMO=4, BOTTLE=5, FOOD=6, NCAT=7;
+const int ORE=0, INGOT=1, COMP=2, TOOL=3, AMMO=4, BOTTLE=5, FOOD=6, ICE=7, NCAT=8;
+bool hadIce = false;
 string[] catKeys;
 List<IMyTerminalBlock>[] cats = new List<IMyTerminalBlock>[NCAT];
 List<IMyTerminalBlock> allInv = new List<IMyTerminalBlock>();
@@ -64,7 +65,7 @@ string[] stepNames = { "Scan","Count","Assign","Sort","Balance","Special","Craft
 
 public Program()
 {
-    catKeys = new[]{ ORE_KEY, INGOT_KEY, COMP_KEY, TOOL_KEY, AMMO_KEY, BOTTLE_KEY, FOOD_KEY };
+    catKeys = new[]{ ORE_KEY, INGOT_KEY, COMP_KEY, TOOL_KEY, AMMO_KEY, BOTTLE_KEY, FOOD_KEY, ICE_KEY };
     for (int i = 0; i < NCAT; i++) cats[i] = new List<IMyTerminalBlock>();
     InitRecipes();
     // blueprint knowledge survives recompiles and world reloads - uncraftable

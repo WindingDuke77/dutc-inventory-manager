@@ -16,7 +16,8 @@ Color[] catColors = {
     new Color(255, 190, 60),   // Tools
     new Color(255, 110, 90),   // Ammo
     new Color(80, 180, 255),   // Bottles
-    new Color(150, 210, 110)   // Food
+    new Color(150, 210, 110),  // Food
+    new Color(140, 220, 235)   // Ice
 };
 
 class UiRow
@@ -72,6 +73,7 @@ void DrawMain(IMyTextSurface s, float us)
     float y = 64f * sc;
     for (int c = 0; c < NCAT; c++)
     {
+        if (c == ICE && cats[c].Count == 0) continue;
         double cur = 0, max = 0;
         foreach (var w in cats[c])
         {

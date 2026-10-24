@@ -1,5 +1,5 @@
 // ========================================
-//         DUTC INVENTORY  v2.0.19
+//         DUTC INVENTORY  v2.0.20
 // ========================================
 // Sorting + even container balancing, auto container assignment, bottle filling
 // (works!), special loadout containers, autocrafting via Custom Data with sprite
@@ -45,6 +45,9 @@ string TOOL_KEY = "Tools";
 string AMMO_KEY = "Ammo";
 string BOTTLE_KEY = "Bottles";
 string FOOD_KEY = "Food";           // food, ingredients and seeds get their own container type
+string ICE_KEY = "Ice";             // OPTIONAL: tag a container "Ice" and all ice routes there instead
+                                    // of Ores (dedicated H2/O2 refuel bays). Never auto-assigned -
+                                    // no Ice container means ice sorts into Ores as always.
 // items that always count as Food no matter what internal type their mod gives them
 string[] foodItems = { "Algae", "Grain" };
 // name fragments that mark an item as Food when its mod uses a generic item type

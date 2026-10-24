@@ -151,7 +151,7 @@ bool Ice()
             double target = Math.Min(share, maxHold);
             if (cur > target + 100)
             {
-                var w = DestFor(ORE, g);
+                var w = DestFor(hadIce ? ICE : ORE, g);
                 if (w != null) PushFrom(inv, ice, cur - target, w.GetInventory(0));
             }
             else if (cur < target - 100)
