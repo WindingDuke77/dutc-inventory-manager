@@ -1,7 +1,7 @@
 # DUTC Inventory build script
 # Merges src\*.cs (in filename order) into DutcInventory_paste.cs for the
 # Space Engineers Programmable Block. The config module (00_*) keeps its
-# comments; all other modules get comments and blank lines stripped.
+# comments; all other modules get comments, blank lines and indentation stripped.
 # Run:  powershell -ExecutionPolicy Bypass -File build.ps1
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -18,11 +18,14 @@ foreach ($f in $files) {
         foreach ($l in $lines) { $out.Add($l) }
         continue
     }
+    # indentation is dropped too: the PB compiler doesn't need it and it costs
+    # thousands of characters of the 100k limit (no multi-line verbatim strings
+    # in the modules - keep it that way)
     foreach ($l in $lines) {
         $t = $l.Trim()
         if ($t -eq "") { continue }
         if ($t.StartsWith("//")) { continue }
-        $out.Add($l)
+        $out.Add($t)
     }
 }
 $out | Out-File $outFile -Encoding utf8

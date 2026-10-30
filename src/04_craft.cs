@@ -7,6 +7,9 @@ string CRAFT_MARKER = "# DUTC Autocrafting";
 // amounts THIS script queued, per blueprint - we only ever remove our own queue
 // entries, so other scripts (e.g. Build & Repair) keep theirs untouched
 Dictionary<MyDefinitionId,double> ourQueued = new Dictionary<MyDefinitionId,double>();
+// crafts that FINISHED per blueprint - if a row's item never shows up in stock
+// despite finished crafts, its name is wrong and it would craft forever
+Dictionary<MyDefinitionId,double> blindMade = new Dictionary<MyDefinitionId,double>();
 // community-confirmed blueprint names no pattern can guess (thanks aantono)
 Dictionary<string,string> knownBp = new Dictionary<string,string>
 {
@@ -93,7 +96,12 @@ bool Craft()
     foreach (var k in okeys)
     {
         double actual; queued.TryGetValue(k, out actual);
-        if (ourQueued[k] > actual) ourQueued[k] = actual;
+        if (ourQueued[k] > actual)
+        {
+            double bm; blindMade.TryGetValue(k, out bm);
+            blindMade[k] = bm + ourQueued[k] - actual;
+            ourQueued[k] = actual;
+        }
     }
     var entries = new List<string[]>();
     var seen = new HashSet<string>();
@@ -232,6 +240,17 @@ bool Craft()
         if (st == -1) { craftRows.Add(new CRow { name = name, cur = cur, want = want, state = -1 }); continue; }
         double inQ; queued.TryGetValue(bp, out inQ);
         bool manage = rowBp.Add(bp);
+        // crafted several times but the row's NAME never appears in stock: the name
+        // doesn't match what the blueprint makes - stop, don't craft forever
+        // (150 paint guns later...)
+        double made; blindMade.TryGetValue(bp, out made);
+        if (byName.ContainsKey(name)) blindMade.Remove(bp);
+        else if (made >= 3)
+        {
+            Warn("'" + name + "' gets crafted but never found in stock - wrong item name? Try PB argument: items <text>");
+            craftRows.Add(new CRow { name = name, cur = cur, want = want, state = -5 });
+            continue;
+        }
         // craft to the EXACT quota - the old 5% margin stopped short and sat green
         // at 4892/5000 (thanks Oxnard + The Burger Buster)
         if (manage && want > 0 && cur + inQ < want - 0.01)
@@ -429,6 +448,7 @@ int DrawCraftPanel(IMyTextSurface s, int index, int start, bool last, float us)
         if (r.state == -2) { col = UI_DIM; valTxt = "ignored"; }
         else if (r.state == -3) { col = UI_DIM; valTxt = Num(r.cur) + "  checking.."; }
         else if (r.state == -4) { col = UI_BAD; valTxt = Num(r.cur) + "  BP?"; }
+        else if (r.state == -5) { col = UI_BAD; valTxt = "NAME?"; }
         else if (r.state == -1) { col = UI_BAD; valTxt = Num(r.cur) + "  NoBP"; }
         else
         {
@@ -616,6 +636,7 @@ int BpState(string name, out MyDefinitionId bp, bool deep)
         // both cores has to match exactly, or tier 1 rows disassemble tier 3 tools
         // (thanks Marcus Tral)
         string cnBase = TrimDigits(coreN); string cnTier = coreN.Substring(cnBase.Length);
+        MyDefinitionId pick = new MyDefinitionId(); int picks = 0; bool pickFit = false;
         foreach (var lb in learnedBps)
         {
             string lc = BpCore(lb.SubtypeName).ToUpper();
@@ -628,8 +649,15 @@ int BpState(string name, out MyDefinitionId bp, bool deep)
             // The confirmed modded cases (ATLAS) match by equality after core-stripping anyway.
             if (lcBase != cnBase) continue;
             MyDefinitionId t2;
-            if (TestBp(lb.SubtypeName, out t2)) { bpCache[name] = t2; return 1; }
+            if (!TestBp(lb.SubtypeName, out t2)) continue;
+            // gun + its ammo can strip to the same core (Blueprint_PaintGun vs
+            // Blueprint_PaintGunAmmo): prefer the candidate whose ammo-ness matches
+            // the row, refuse if several match and none fits
+            bool fit = AmmoName(lb.SubtypeName) == AmmoName(core);
+            if (picks == 0 || (fit && !pickFit)) { pick = t2; pickFit = fit; }
+            picks++;
         }
+        if (picks == 1 || (picks > 1 && pickFit)) { bpCache[name] = pick; return 1; }
     }
     if (!deep) return 0;
     if (probeBudget <= 0 || Runtime.CurrentInstructionCount > 28000) return 0;
@@ -680,11 +708,17 @@ string TrimDigits(string s)
 // blueprint: "ATLASAmmoMagazine" and "40mmATLASBP" both reduce to "ATLAS"
 string BpCore(string s)
 {
-    s = System.Text.RegularExpressions.Regex.Replace(s, @"(?i)^(Position\d+_|\d+mm)", "");
+    // Blueprint_/BP_ are common modder wrappers (Blueprint_PaintGun), Physical is
+    // a common item wrapper (PhysicalPaintGun) - strip both sides, twice
     for (int i = 0; i < 2; i++)
-        s = System.Text.RegularExpressions.Regex.Replace(s, @"(?i)(AmmoMagazine|MagDef|Magazine|Component|Ammo|Item|Mag|Def|BP)$", "");
+    {
+        s = System.Text.RegularExpressions.Regex.Replace(s, @"(?i)^(Position\d+_|Blueprint_|BP_|Physical|\d+mm)", "");
+        s = System.Text.RegularExpressions.Regex.Replace(s, @"(?i)(AmmoMagazine|MagDef|Magazine|Component|Blueprint|Ammo|Item|Mag|Def|BP)$", "").Trim('_');
+    }
     return s;
 }
+
+bool AmmoName(string s) { return System.Text.RegularExpressions.Regex.IsMatch(s, @"(?i)(ammo|magazine|magdef|_mag_|mag$|\d+rd$)"); }
 
 // PB argument "bps": blueprints seen queued in your assemblers, newest first -
 // queue a stubborn item once by hand and copy its exact blueprint name from here
