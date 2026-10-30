@@ -16,7 +16,7 @@ Inventory Manager setups and safe alongside Nanobot Build & Repair.
 - Turret + fixed gun ammo loading (subgrids and docked ships included)
 - Autocrafting driven by the Autocrafting LCD's Custom Data, with deep modded-blueprint discovery
 - Disassembling: `SteelPlate=1000D` melts the excess above the wanted amount back down
-- Assembler feeding (ingots pre-stocked for the queue), refinery feeding + ore balancing, ice + uranium balancing
+- Assembler feeding (ingots pre-stocked for the queue), refinery feeding + ore balancing, ice + uranium balancing (farm Irrigation Systems get ice first and are never drained)
 - Bottle refilling through tanks — including bottles already in storage
 - Multi-instance election (base + docked ship each running the script pick one active manager)
 - Build Planner safe: the script only ever cancels queue entries it created itself

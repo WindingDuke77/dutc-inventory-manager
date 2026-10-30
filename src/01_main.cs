@@ -11,6 +11,7 @@ List<IMyRefinery> refineries = new List<IMyRefinery>();
 List<IMyAssembler> assemblers = new List<IMyAssembler>();
 List<IMyAssembler> distinctAsm = new List<IMyAssembler>();
 List<IMyGasGenerator> gens = new List<IMyGasGenerator>();
+List<IMyGasGenerator> irrig = new List<IMyGasGenerator>();
 List<IMyReactor> reactors = new List<IMyReactor>();
 List<IMyGasTank> tanks = new List<IMyGasTank>();
 List<IMyUserControllableGun> guns = new List<IMyUserControllableGun>();

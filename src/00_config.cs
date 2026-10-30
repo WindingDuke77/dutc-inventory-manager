@@ -1,10 +1,11 @@
 // ========================================
-//         DUTC INVENTORY  v2.0.21
+//         DUTC INVENTORY  v2.0.22
 // ========================================
 // Sorting + even container balancing, auto container assignment, bottle filling
 // (works!), special loadout containers, autocrafting via Custom Data with sprite
-// status screen, refinery feeding + ore balancing + queue priority, ice balancing,
-// uranium balancing, turret ammo loading (subgrids + docked ships), assembler
+// status screen, refinery feeding + ore balancing + queue priority, ice balancing
+// (farm irrigation first), uranium balancing, turret ammo loading (subgrids +
+// docked ships), assembler
 // feeding + cleanup, sprite LCDs with auto-scroll, multi-instance election
 // (station beats ship), Nanobot Build & Repair fully hands-off.
 //
@@ -112,6 +113,10 @@ List<string> orePriority = new List<string>{ "Stone","Iron","Nickel","Cobalt","S
 
 bool iceBalancing = true;           // spread ice across O2/H2 generators
 double iceBottleReserve = 240;      // liters kept free in each generator for bottles
+// Irrigation Systems (farm water) get ice FIRST, keep their own conveyor pull and
+// are never drained back to storage. Matches block name or subtype.
+string[] irrigationBlocks = { "Irrigation" };
+double irrigationIce = 0;           // ice kept in each one; 0 = keep it full (~27,000 = 45 min of water)
 
 bool uraniumBalancing = true;       // keep a fixed uranium amount in each reactor
 double uraniumLarge = 100;          // per large-grid reactor

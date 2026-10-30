@@ -133,15 +133,31 @@ bool Turrets()
 
 bool Ice()
 {
-    if (!iceBalancing || gens.Count == 0) return true;
+    if (!iceBalancing || gens.Count + irrig.Count == 0) return true;
     // balance EVERY ice-type ore, modded ones included (thanks aantono)
     var iceTypes = new List<MyItemType>();
     foreach (var kv in stock) if (IsIce(kv.Key)) iceTypes.Add(kv.Key);
     if (iceTypes.Count == 0) return true;
     foreach (var g in gens) g.UseConveyorSystem = false;
+    // farm water comes first: Irrigation Systems burn 600 ice/min, keep their own
+    // conveyor pull, get topped up before any H2/O2 generator and are never
+    // drained back to storage (thanks Kantorock)
+    foreach (var g in irrig) g.UseConveyorSystem = true;
     foreach (var ice in iceTypes)
     {
-        double share = CountOf(ice) / gens.Count;
+        double left = CountOf(ice);
+        foreach (var g in irrig)
+        {
+            var inv = g.GetInventory(0);
+            double cur = (double)inv.GetItemAmount(ice);
+            double room = ((double)inv.MaxVolume - (double)inv.CurrentVolume) * 1000.0 / 0.37;
+            double want = irrigationIce > 0 ? Math.Min(irrigationIce - cur, room) : room;
+            if (want > 100) cur += PullTo(inv, ice, want, g);
+            left -= cur;
+            if (Runtime.CurrentInstructionCount > 30000) return true;
+        }
+        if (gens.Count == 0) continue;
+        double share = Math.Max(0, left) / gens.Count;
         foreach (var g in gens)
         {
             var inv = g.GetInventory(0);
