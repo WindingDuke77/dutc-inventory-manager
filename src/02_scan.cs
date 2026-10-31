@@ -183,8 +183,10 @@ bool Count()
             if (b.CustomName.Contains(HIDDEN_KEY)) continue;
             // craftStock is what autocraft quotas see: by default docked ships don't
             // count (their stock leaves with them), turrets and Specials are
-            // configurable (thanks Papa Murderdolls)
-            bool forCraft = (craftCountDocked || b.IsSameConstructAs(Me))
+            // configurable (thanks Papa Murderdolls). A connector-joined STATION
+            // grid can't fly off - it's part of the base and always counts,
+            // or quotas get crafted again on top of it (thanks Kantorock)
+            bool forCraft = (craftCountDocked || b.IsSameConstructAs(Me) || b.CubeGrid.IsStatic)
                 && (craftCountGuns || !(b is IMyUserControllableGun))
                 && (countPass == 0 || craftCountSpecials);
             for (int q = 0; q < b.InventoryCount; q++)

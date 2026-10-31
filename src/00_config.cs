@@ -1,5 +1,5 @@
 // ========================================
-//         DUTC INVENTORY  v2.1.0
+//         DUTC INVENTORY  v2.1.1
 // ========================================
 // Sorting + even container balancing, auto container assignment, bottle filling
 // (works!), special loadout containers, autocrafting via Custom Data with sprite
@@ -95,6 +95,7 @@ double craftMargin = 0.05;          // D rows melt only above wanted*(1+margin);
 bool allowDisassembly = true;       // D modifier (Name=1000D): disassemble the excess above the wanted amount
 // what counts toward autocraft quotas (sorting and the DUTC-inv screens always see everything):
 bool craftCountDocked = false;      // items on DOCKED ships don't satisfy base quotas - they leave with the ship (thanks Papa Murderdolls)
+                                    // connector-joined STATION grids always count, they can't leave
 bool craftCountGuns = true;         // ammo already loaded in turrets and fixed guns counts
 bool craftCountSpecials = true;     // items inside Special containers count
 

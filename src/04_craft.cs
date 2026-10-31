@@ -118,6 +118,10 @@ bool Craft()
             int eq = l.IndexOf('=');
             if (eq <= 0) continue;
             string name = l.Substring(0, eq).Trim();
+            // "-Name=0" hides the row like the H modifier - it used to become a
+            // second, unknown item while the real row got re-added (thanks Jasper)
+            bool hideRow = name.StartsWith("-");
+            if (hideRow) name = name.Substring(1).Trim();
             // pasted full paths work too: "MyObjectBuilder_SeedItem/Grain" counts the
             // SEEDS, not the crop - without this the processor loops forever (thanks Froman Joe)
             if (name.StartsWith("MyObjectBuilder_")) name = name.Substring(16);
@@ -156,6 +160,7 @@ bool Craft()
             double want;
             double.TryParse(System.Text.RegularExpressions.Regex.Match(val, @"\d+").Value, out want);
             string mods = System.Text.RegularExpressions.Regex.Replace(val, @"[\d\.\s]", "").ToUpper();
+            if (hideRow) mods += "H";
             if (name == "" || seen.Contains(name)) continue;
             seen.Add(name);
             entries.Add(new[] { name, want.ToString(), mods, bpOv });
@@ -203,9 +208,11 @@ bool Craft()
     // dormant duplicate cancels the real row's queue every cycle - "queued my
     // Vegetable Seeds once after a reinstall, then never again"
     var rowBp = new HashSet<MyDefinitionId>();
+    var hidden = new HashSet<string>();
     foreach (var e in entries)
     {
         string name = e[0]; string mods = e[2];
+        if (mods.Contains("H")) hidden.Add(name);
         double want; double.TryParse(e[1], out want);
         MyItemType t;
         double cur = byName.TryGetValue(name, out t) ? CountOfCraft(t) : 0;
@@ -289,6 +296,8 @@ bool Craft()
         }
         craftRows.Add(new CRow { name = name, cur = cur, want = want, state = 0, inQ = inQ, disQ = disQ });
     }
+    // H rows keep crafting to their quota, they just don't take up screen space
+    if (hidden.Count > 0) craftRows.RemoveAll(r => hidden.Contains(r.name));
     if (balanceAssemblers) RebalanceAsm();
     DrawCraftScreens();
     return true;
@@ -340,7 +349,7 @@ void SetupCraftCD(IMyTextPanel master)
     var sbcd = new StringBuilder();
     sbcd.Append(CRAFT_MARKER + "\n");
     sbcd.Append("# Edit the number = wanted stock. The screen only displays status.\n");
-    sbcd.Append("# Modifiers after the number:  P = craft first (priority),  I = ignore\n");
+    sbcd.Append("# Modifiers after the number:  P = craft first (priority),  I = ignore,  H = hide from the screen\n");
     sbcd.Append("#   D = disassemble the excess above the wanted amount (e.g. SteelPlate=1000D)\n");
     sbcd.Append("# Refinery quota: Ingot/Iron=50000 keeps 50k iron ingots - ore feeding stops at the target, resumes below it.\n");
     sbcd.Append("# Modded item stuck on NoBP? Force its blueprint: Name=100 BP:BlueprintSubtype\n");
