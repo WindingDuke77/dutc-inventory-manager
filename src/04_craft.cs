@@ -399,8 +399,7 @@ int DrawCraftPanel(IMyTextSurface s, int index, int start, bool last, float us)
     var f = Begin(s);
     Vector2 size = s.SurfaceSize, off = (s.TextureSize - size) * 0.5f;
     float W = size.X, H = size.Y, sc = Math.Min(W, H) / 512f * us;
-    string hd = "DUTC AUTOCRAFTING" + (craftLCDs.Count > 1 ? " " + (index + 1) + "/" + craftLCDs.Count : "");
-    f.Add(Txt(hd, off + new Vector2(W * 0.5f, 10f * sc), 1.05f * sc, UI_DIM));
+    string hd = "AUTOCRAFTING" + (craftLCDs.Count > 1 ? " " + (index + 1) + "/" + craftLCDs.Count : "");
     int okC = 0, craftC = 0, lowC = 0, nobpC = 0, chkC = 0;
     foreach (var r in craftRows)
     {
@@ -416,13 +415,14 @@ int DrawCraftPanel(IMyTextSurface s, int index, int start, bool last, float us)
     string counts = okC + " ok   " + craftC + " crafting   " + lowC + " low   " + nobpC + " noBP";
     if (chkC > 0) counts += "   " + chkC + " checking";
     counts += "   |   edit Custom Data";
-    f.Add(Txt(counts, off + new Vector2(W * 0.5f, 38f * sc), 0.55f * sc, UI_DIM));
-    f.Add(Box(off + new Vector2(W * 0.5f, 64f * sc), new Vector2(W * 0.9f, 2f * sc), UI_FRAME));
+    f.Add(Txt(counts, off + new Vector2(W * 0.5f, 62f * sc), 0.55f * sc, UI_DIM));
+    f.Add(Box(off + new Vector2(W * 0.5f, 86f * sc), new Vector2(W * 0.94f, 2f * sc), UI_FRAME));
     float rowPx = 26f * sc;
-    float yStart = 77f * sc;
+    float yStart = 94f * sc;
     int maxRows = Math.Max(1, (int)((H - 18f * sc - yStart) / rowPx));
     int total = craftRows.Count;
     int offR = start;
+    string ind = "DUTC";
     if (last)
     {
         int remaining = total - start;
@@ -434,10 +434,11 @@ int DrawCraftPanel(IMyTextSurface s, int index, int start, bool last, float us)
             if (so > maxOff || so < 0) so = 0;
             scroll[key] = so + 2 > maxOff ? (so >= maxOff ? 0 : maxOff) : so + 2;
             offR = start + so;
-            string ind = (so > 0 ? "^" + so + " " : "") + (maxOff - so > 0 ? "v" + (maxOff - so) : "");
-            if (ind != "") f.Add(Txt(ind, off + new Vector2(W * 0.05f, 10f * sc), 0.55f * sc, UI_DIM, TextAlignment.LEFT));
+            string v = (so > 0 ? "^" + so + " " : "") + (maxOff - so > 0 ? "v" + (maxOff - so) : "");
+            if (v != "") ind = v;
         }
     }
+    Head(f, off, W, sc, hd, ind);
     int maxChars = (int)(W * 0.42f / (10.5f * sc));
     float y = yStart;
     int drawn = 0;
@@ -457,6 +458,7 @@ int DrawCraftPanel(IMyTextSurface s, int index, int start, bool last, float us)
             col = r.want <= 0 ? UI_DIM : r.cur >= r.want - 0.5 ? (r.disQ > 0 ? UI_WARNC : UI_GOOD) : r.inQ > 0 ? UI_WARNC : UI_BAD;
             valTxt = Num(r.cur) + " / " + Num(r.want) + (r.inQ > 0 ? " +" + Math.Round(r.inQ) : "") + (r.disQ > 0 ? " -" + Math.Round(r.disQ) : "");
         }
+        if (drawn % 2 == 0) f.Add(Box(off + new Vector2(W * 0.5f, y + 10f * sc), new Vector2(W * 0.94f, 24f * sc), UI_PANEL));
         f.Add(Txt(TruncS(r.name, maxChars), off + new Vector2(W * 0.05f, y), 0.6f * sc, UI_TEXT, TextAlignment.LEFT));
         f.Add(Txt(valTxt, off + new Vector2(W * 0.70f, y), 0.55f * sc, col, TextAlignment.RIGHT));
         if (frac >= 0) DrawBar(f, off + new Vector2(W * 0.845f, y + 8f * sc), W * 0.25f, 10f * sc, frac, col);

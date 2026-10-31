@@ -1,5 +1,5 @@
 // ========================================
-//         DUTC INVENTORY  v2.0.22
+//         DUTC INVENTORY  v2.1.0
 // ========================================
 // Sorting + even container balancing, auto container assignment, bottle filling
 // (works!), special loadout containers, autocrafting via Custom Data with sprite

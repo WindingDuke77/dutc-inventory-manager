@@ -9,6 +9,8 @@ Color UI_DIM = new Color(110, 120, 140);
 Color UI_GOOD = new Color(80, 220, 120);
 Color UI_WARNC = new Color(255, 190, 60);
 Color UI_BAD = new Color(255, 80, 70);
+Color UI_PANEL = new Color(18, 22, 32);
+Color UI_BRAND = new Color(120, 160, 255); // Inventory accent (header)
 Color[] catColors = {
     new Color(200, 140, 80),   // Ores
     new Color(170, 190, 210),  // Ingots
@@ -66,14 +68,15 @@ void DrawMain(IMyTextSurface s, float us)
     Vector2 size = s.SurfaceSize, off = (s.TextureSize - size) * 0.5f;
     float W = size.X, H = size.Y, sc = Math.Min(W, H) / 512f * us;
     // all vertical spacing in PIXELS so tall/vertical LCDs don't stretch rows apart (thanks VFox32)
-    f.Add(Txt("DUTC INVENTORY", off + new Vector2(W * 0.5f, 10f * sc), 1.15f * sc, UI_DIM));
-    f.Add(Txt(("" + "|/-\\"[tick % 4]), off + new Vector2(W * 0.95f, 10f * sc), 1.0f * sc, UI_DIM, TextAlignment.RIGHT));
+    Head(f, off, W, sc, "INVENTORY", "DUTC " + "|/-\\"[tick % 4]);
     // standby was only visible in the PB terminal before - say it on screen too (thanks Enig)
-    if (standby) f.Add(Txt("STANDBY - " + TruncS(masterName.Replace("\n", " "), 34) + " is active", off + new Vector2(W * 0.5f, 42f * sc), 0.55f * sc, UI_WARNC));
-    float y = 64f * sc;
+    if (standby) f.Add(Txt("STANDBY - " + TruncS(masterName.Replace("\n", " "), 34) + " is active", off + new Vector2(W * 0.5f, 62f * sc), 0.55f * sc, UI_WARNC));
+    float y = (standby ? 86f : 68f) * sc;
+    int rn = 0;
     for (int c = 0; c < NCAT; c++)
     {
         if (c == ICE && cats[c].Count == 0) continue;
+        if (rn++ % 2 == 0) f.Add(Box(off + new Vector2(W * 0.5f, y + 11f * sc), new Vector2(W * 0.94f, 28f * sc), UI_PANEL));
         double cur = 0, max = 0;
         foreach (var w in cats[c])
         {
@@ -123,10 +126,8 @@ void DrawList(IMyTextSurface s, string title, List<UiRow> rows, bool scrollOn, f
     var f = Begin(s);
     Vector2 size = s.SurfaceSize, off = (s.TextureSize - size) * 0.5f;
     float W = size.X, H = size.Y, sc = Math.Min(W, H) / 512f * us;
-    f.Add(Txt("DUTC " + title, off + new Vector2(W * 0.5f, 10f * sc), 1.05f * sc, UI_DIM));
-    f.Add(Box(off + new Vector2(W * 0.5f, 46f * sc), new Vector2(W * 0.9f, 2f * sc), UI_FRAME));
     float rowPx = 26f * sc;
-    float yStart = 59f * sc;
+    float yStart = 66f * sc;
     int maxRows = Math.Max(1, (int)((H - 18f * sc - yStart) / rowPx));
     int total = rows.Count;
     int offR = 0;
@@ -140,10 +141,18 @@ void DrawList(IMyTextSurface s, string title, List<UiRow> rows, bool scrollOn, f
     }
     int maxChars = (int)(W * 0.55f / (10.5f * sc));
     int maxCharsWide = (int)(W * 0.9f / (10.5f * sc));
+    string ind = "DUTC";
+    if (total > maxRows)
+    {
+        string v = (offR > 0 ? "^" + offR + " " : "") + (total - offR - maxRows > 0 ? "v" + (total - offR - maxRows) : "");
+        if (v != "") ind = v;
+    }
+    Head(f, off, W, sc, title, ind);
     float y = yStart;
     for (int i = offR; i < total && i < offR + maxRows; i++)
     {
         var r = rows[i];
+        if (r.kind != 0 && (i - offR) % 2 == 0) f.Add(Box(off + new Vector2(W * 0.5f, y + 10f * sc), new Vector2(W * 0.94f, 24f * sc), UI_PANEL));
         if (r.kind == 0)
         {
             f.Add(Txt(r.name, off + new Vector2(W * 0.5f, y), 0.72f * sc, r.col));
@@ -160,11 +169,6 @@ void DrawList(IMyTextSurface s, string title, List<UiRow> rows, bool scrollOn, f
             f.Add(Txt(TruncS(r.name, maxCharsWide), off + new Vector2(W * 0.05f, y), 0.55f * sc, r.col, TextAlignment.LEFT));
         }
         y += rowPx;
-    }
-    if (total > maxRows)
-    {
-        string ind = (offR > 0 ? "^" + offR + " " : "") + (total - offR - maxRows > 0 ? "v" + (total - offR - maxRows) : "");
-        if (ind != "") f.Add(Txt(ind, off + new Vector2(W * 0.05f, 10f * sc), 0.55f * sc, UI_DIM, TextAlignment.LEFT));
     }
     if (total == 0) f.Add(Txt("- nothing to show -", off + new Vector2(W * 0.5f, H * 0.45f), 0.8f * sc, UI_DIM));
     f.Dispose();
@@ -331,7 +335,19 @@ IMyTextSurface SurfaceFor(IMyTerminalBlock b, string[] tags)
     return b as IMyTextSurface;
 }
 
-// ----- sprite helpers (PowerDeck style) -----
+// ----- sprite helpers (shared DUTC screen kit) -----
+
+// header band with hazard stripes, title and right label - same in every DUTC script
+void Head(MySpriteDrawFrame f, Vector2 off, float W, float sc, string title, string right)
+{
+    f.Add(Box(off + new Vector2(W * 0.5f, 26f * sc), new Vector2(W, 52f * sc), UI_PANEL));
+    f.Add(Box(off + new Vector2(W * 0.5f, 53.5f * sc), new Vector2(W, 3f * sc), UI_BRAND));
+    for (int i = 0; i < 4; i++)
+        f.Add(new MySprite(SpriteType.TEXTURE, "SquareSimple", off + new Vector2((24f + i * 11f) * sc, 26f * sc),
+            new Vector2(5f * sc, 22f * sc), UI_BRAND, null, TextAlignment.CENTER, 0.5f));
+    f.Add(Txt(title, off + new Vector2(76f * sc, 12f * sc), 0.95f * sc, UI_TEXT, TextAlignment.LEFT));
+    f.Add(new MySprite(SpriteType.TEXT, right, off + new Vector2(W - 16f * sc, 17f * sc), null, UI_DIM, "Monospace", TextAlignment.RIGHT, 0.6f * sc));
+}
 
 HashSet<int> drawnOnce = new HashSet<int>();
 
