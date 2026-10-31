@@ -19,7 +19,8 @@ Color[] catColors = {
     new Color(255, 110, 90),   // Ammo
     new Color(80, 180, 255),   // Bottles
     new Color(150, 210, 110),  // Food
-    new Color(140, 220, 235)   // Ice
+    new Color(140, 220, 235),  // Ice
+    new Color(150, 145, 135)   // Gravel
 };
 
 class UiRow
@@ -75,7 +76,7 @@ void DrawMain(IMyTextSurface s, float us)
     int rn = 0;
     for (int c = 0; c < NCAT; c++)
     {
-        if (c == ICE && cats[c].Count == 0) continue;
+        if ((c == ICE || c == GRAVEL) && cats[c].Count == 0) continue;
         if (rn++ % 2 == 0) f.Add(Box(off + new Vector2(W * 0.5f, y + 11f * sc), new Vector2(W * 0.94f, 28f * sc), UI_PANEL));
         double cur = 0, max = 0;
         foreach (var w in cats[c])
@@ -277,7 +278,7 @@ void RenderInv(IMyTextSurface s, string[] lines, float us)
             int cc = Cat(kv.Key);
             // ingot rows also show the unrefined ore still waiting (thanks LucaZanna)
             string extra = "";
-            if (cc == INGOT)
+            if (cc == INGOT || cc == GRAVEL)
             {
                 double oreAmt = CountOf(MyItemType.MakeOre(kv.Key.SubtypeId));
                 if (oreAmt >= 1) extra = " +" + Num(oreAmt);

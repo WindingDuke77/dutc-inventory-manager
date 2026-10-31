@@ -131,6 +131,7 @@ bool Scan()
     // the moment Ice containers appear (or all vanish) the cached item
     // classification is stale - ice flips between Ore and Ice category
     if ((cats[ICE].Count > 0) != hadIce) { hadIce = cats[ICE].Count > 0; catCache.Clear(); }
+    if ((cats[GRAVEL].Count > 0) != hadGravel) { hadGravel = cats[GRAVEL].Count > 0; catCache.Clear(); }
     // one assembler per block type - blueprint discovery only needs to probe each type once
     distinctAsm.Clear();
     foreach (var a in assemblers)
@@ -220,6 +221,9 @@ bool Count()
     }
     foreach (var t in stock.Keys)
         if (!byName.ContainsKey(t.SubtypeId)) byName[t.SubtypeId] = t;
+    // "Gravel=All" on a Special container - the item is really Ingot/Stone
+    var gravel = MyItemType.MakeIngot("Stone");
+    if (stock.ContainsKey(gravel)) byName["Gravel"] = gravel;
     return true;
 }
 
@@ -230,7 +234,7 @@ bool Assign()
         reachBudget = 3;
         for (int c = 0; c < NCAT; c++)
         {
-            if (c == ICE) continue;   // Ice containers are opt-in, never auto-assigned
+            if (c == ICE || c == GRAVEL) continue;   // opt-in, never auto-assigned
             bool need = cats[c].Count == 0;
             if (!need)
             {
@@ -239,9 +243,11 @@ bool Assign()
             }
             if (!need) continue;
             // decorative lockers/cabinets have inventories but no conveyor ports -
-            // only assign containers that are actually reachable through conveyors
+            // only assign containers that are actually reachable through conveyors.
+            // Biggest box goes first, so a huge gravel-only modded box used to get
+            // tagged for something it can't hold (thanks EBALL360)
             IMyCargoContainer box = null;
-            foreach (var u in untagged) { if (Reachable(u)) { box = u; break; } }
+            foreach (var u in untagged) { if (Fits(u.GetInventory(0), catProbe[c]) && Reachable(u)) { box = u; break; } }
             if (box == null) { Warn("No conveyor-connected cargo container free to assign for '" + catKeys[c] + "'!"); continue; }
             untagged.Remove(box);
             box.CustomName = box.CustomName + " " + catKeys[c];

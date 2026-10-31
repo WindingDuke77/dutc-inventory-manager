@@ -11,7 +11,7 @@ Inventory Manager setups and safe alongside Nanobot Build & Repair.
 
 ## Features
 
-- Item sorting into type containers: Ores / Ingots / Components / Tools / Ammo / Bottles / Food
+- Item sorting into type containers: Ores / Ingots / Components / Tools / Ammo / Bottles / Food, plus optional Ice / Gravel (single-item modded boxes are respected)
 - Even balancing of every item across same-type containers
 - Turret + fixed gun ammo loading (subgrids and docked ships included)
 - Autocrafting driven by the Autocrafting LCD's Custom Data, with deep modded-blueprint discovery

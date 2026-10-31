@@ -20,7 +20,8 @@ int CatCalc(MyItemType t)
     // ice only becomes its own category when an "Ice" container exists -
     // otherwise it stays an Ore, exactly like before
     if (ty.EndsWith("_Ore")) return hadIce && IsIce(t) ? ICE : ORE;
-    if (ty.EndsWith("_Ingot")) return INGOT;
+    // same for gravel and a "Gravel" container (thanks EBALL360)
+    if (ty.EndsWith("_Ingot")) return hadGravel && t.SubtypeId == "Stone" ? GRAVEL : INGOT;
     if (ty.EndsWith("_Component")) return COMP;
     if (ty.EndsWith("_AmmoMagazine")) return AMMO;
     if (ty.EndsWith("_OxygenContainerObject") || ty.EndsWith("_GasContainerObject")) return BOTTLE;
@@ -93,15 +94,31 @@ bool Reachable(IMyTerminalBlock b)
     return v;
 }
 
-IMyTerminalBlock DestFor(int c, IMyTerminalBlock exclude)
+// with an item type, containers whose inventory refuses it are skipped -
+// single-item modded boxes (gravel-only, ingot-only...) (thanks EBALL360)
+IMyTerminalBlock DestFor(int c, IMyTerminalBlock exclude, MyItemType? t = null)
 {
     foreach (var w in cats[c])
     {
         if (w == exclude) continue;
-        if (HasSpace(w.GetInventory(0))) return w;
+        var inv = w.GetInventory(0);
+        if (HasSpace(inv) && (t == null || Fits(inv, t.Value))) return w;
     }
     return null;
 }
+
+bool Fits(IMyInventory inv, MyItemType t)
+{
+    try { return inv.CanItemsBeAdded(1, t); } catch { return true; }
+}
+
+// one vanilla item per category: auto-assign only tags a box that can hold it
+MyItemType[] catProbe = {
+    MyItemType.MakeOre("Iron"), MyItemType.MakeIngot("Iron"), MyItemType.MakeComponent("SteelPlate"),
+    MyItemType.MakeTool("WelderItem"), MyItemType.MakeAmmo("NATO_25x184mm"),
+    new MyItemType("MyObjectBuilder_OxygenContainerObject", "OxygenBottle"),
+    new MyItemType("MyObjectBuilder_ConsumableItem", "ClangCola"),
+    MyItemType.MakeOre("Ice"), MyItemType.MakeIngot("Stone") };
 
 bool Tankable(MyItemType t)
 {

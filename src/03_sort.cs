@@ -38,8 +38,12 @@ bool Sort()
             }
             if (dst == null)
             {
-                var w = DestFor(c, b);
-                if (w == null) { Warn("All '" + catKeys[c] + "' containers are full!"); continue; }
+                var w = DestFor(c, b, it.Type);
+                if (w == null)
+                {
+                    Warn(DestFor(c, b) == null ? "All '" + catKeys[c] + "' containers are full!" : "No '" + catKeys[c] + "' container accepts " + it.Type.SubtypeId);
+                    continue;
+                }
                 dst = w.GetInventory(0); dstName = w.CustomName; dstId = w.EntityId;
             }
             if (!CanMove(inv, b.EntityId, dst, dstId, it.Type))
@@ -97,7 +101,7 @@ bool Balance()
                     var pInv = poor.GetInventory(0);
                     double pc = (double)pInv.GetItemAmount(t);
                     if (pc >= avg - tol) continue;
-                    if (!HasSpace(pInv)) continue;
+                    if (!HasSpace(pInv) || !Fits(pInv, t)) continue;
                     if (Runtime.CurrentInstructionCount > 28000) return true;
                     double move = Math.Floor(Math.Min(cur - avg, avg - pc) + 0.001);
                     if (move < 1) continue;
@@ -149,7 +153,7 @@ bool SpecialFill()
             {
                 int c = Cat(t);
                 if (c < 0) continue;
-                var w = DestFor(c, b);
+                var w = DestFor(c, b, t);
                 if (w != null) PushFrom(inv, t, cur - want, w.GetInventory(0));
             }
         }

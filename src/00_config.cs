@@ -1,5 +1,5 @@
 // ========================================
-//         DUTC INVENTORY  v2.1.1
+//         DUTC INVENTORY  v2.2.0
 // ========================================
 // Sorting + even container balancing, auto container assignment, bottle filling
 // (works!), special loadout containers, autocrafting via Custom Data with sprite
@@ -49,6 +49,8 @@ string FOOD_KEY = "Food";           // food, ingredients and seeds get their own
 string ICE_KEY = "Ice";             // OPTIONAL: tag a container "Ice" and all ice routes there instead
                                     // of Ores (dedicated H2/O2 refuel bays). Never auto-assigned -
                                     // no Ice container means ice sorts into Ores as always.
+string GRAVEL_KEY = "Gravel";       // OPTIONAL: tag a container "Gravel" and all gravel routes there instead
+                                    // of Ingots (gravel-only modded boxes). Never auto-assigned either.
 // items that always count as Food no matter what internal type their mod gives them
 string[] foodItems = { "Algae", "Grain" };
 // name fragments that mark an item as Food when its mod uses a generic item type

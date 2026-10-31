@@ -63,7 +63,7 @@ bool Refine()
                         int pr = orePriority.IndexOf(items[i].Type.SubtypeId);
                         if (pr < 0) pr = 999;
                         if (pr <= bestAvail) continue;
-                        var w = DestFor(ORE, r);
+                        var w = DestFor(ORE, r, items[i].Type);
                         if (w == null) break;
                         PushFrom(inv, items[i].Type, (double)items[i].Amount, w.GetInventory(0));
                         Act("Evicted " + items[i].Type.SubtypeId + " from " + StripPct(r.CustomName));
@@ -167,7 +167,7 @@ bool Ice()
             double target = Math.Min(share, maxHold);
             if (cur > target + 100)
             {
-                var w = DestFor(hadIce ? ICE : ORE, g);
+                var w = DestFor(hadIce ? ICE : ORE, g, ice);
                 if (w != null) PushFrom(inv, ice, cur - target, w.GetInventory(0));
             }
             else if (cur < target - 100)
@@ -192,7 +192,7 @@ bool Uranium()
         double cur = (double)inv.GetItemAmount(ur);
         if (cur > target + 1)
         {
-            var w = DestFor(INGOT, r);
+            var w = DestFor(INGOT, r, ur);
             if (w != null) PushFrom(inv, ur, cur - target, w.GetInventory(0));
         }
         else if (cur < target - 1)
@@ -281,7 +281,7 @@ void FeedAssemblers()
             double have = (double)inv.GetItemAmount(t);
             if (have > target * 1.5 + 100)
             {
-                var w = DestFor(INGOT, a);
+                var w = DestFor(INGOT, a, t);
                 if (w != null) PushFrom(inv, t, have - target, w.GetInventory(0));
                 continue;
             }

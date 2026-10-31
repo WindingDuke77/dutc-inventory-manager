@@ -7,11 +7,11 @@ Issues and pull requests welcome - most fixes in this script came from the commu
 
 [h1]Features[/h1]
 [list]
-[*][b]Item sorting[/b] - everything routes into type containers: Ores / Ingots / Components / Tools / Ammo / Bottles / Food
-[*][b]Food category[/b] - food, ingredients, seeds and produce get their own containers, vegetables from generic-typed mods included (extendable foodWords list in the config); modded bottle-type items (powerbanks, shields, paint guns) no longer cycle through tanks
+[*][b]Item sorting[/b] - everything routes into type containers: Ores / Ingots / Components / Tools / Ammo / Bottles / Food. Optional: Ice / Gravel
+[*][b]Food category[/b] - food, ingredients, seeds and produce get their own containers, vegetables from generic-typed mods included (extendable foodWords list in the config)
 [*][b]Even container balancing[/b] - items split equally across same-type containers
 [*][b]Turret ammo loading[/b] - every turret and fixed gun kept stocked, subgrids and docked ships included
-[*][b]Auto container assignment[/b] - type full or missing? Biggest free cargo gets tagged automatically
+[*][b]Auto container assignment[/b] - type full or missing? Biggest free cargo that can hold that type gets tagged automatically
 [*][b]Bottle refilling that works[/b] - bottles route through tanks with gas, and bottles already stored get topped up too
 [*][b]Autocrafting[/b] - wanted amounts live in the LCD's Custom Data (prefilled with every craftable item). Colored status screen: green = stocked, amber = crafting, red = low
 [*][b]Blueprint learning[/b] - queue a stubborn modded item once by hand and the script adopts its blueprint automatically
