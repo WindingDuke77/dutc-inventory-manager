@@ -1,10 +1,10 @@
 // ========================================
-//         DUTC INVENTORY  v2.2.0
+//         DUTC INVENTORY  v2.2.1
 // ========================================
 // Sorting + even container balancing, auto container assignment, bottle filling
 // (works!), special loadout containers, autocrafting via Custom Data with sprite
 // status screen, refinery feeding + ore balancing + queue priority, ice balancing
-// (farm irrigation first), uranium balancing, turret ammo loading (subgrids +
+// (ice reactors + farm irrigation first), uranium balancing, turret ammo loading (subgrids +
 // docked ships), assembler
 // feeding + cleanup, sprite LCDs with auto-scroll, multi-instance election
 // (station beats ship), Nanobot Build & Repair fully hands-off.
@@ -120,6 +120,11 @@ double iceBottleReserve = 240;      // liters kept free in each generator for bo
 // are never drained back to storage. Matches block name or subtype.
 string[] irrigationBlocks = { "Irrigation" };
 double irrigationIce = 0;           // ice kept in each one; 0 = keep it full (~27,000 = 45 min of water)
+// reactors that burn ICE (Helios fusion and other mods) are detected by what their
+// inventory accepts. They get ice before irrigation and O2/H2 generators.
+double reactorIce = 0;              // 0 = keep each one full, own conveyor pull on, never drained.
+                                    // above 0 = the script holds exactly that much in each (own pull
+                                    // off, excess goes back to storage). 1 kg ice = 1 MWh on Helios.
 
 bool uraniumBalancing = true;       // keep a fixed uranium amount in each reactor
 double uraniumLarge = 100;          // per large-grid reactor

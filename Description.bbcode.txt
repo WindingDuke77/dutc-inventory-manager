@@ -19,7 +19,7 @@ Issues and pull requests welcome - most fixes in this script came from the commu
 [*][b]Refinery management[/b] - auto-fed by ore priority (Stone first by default), ore balanced evenly across refineries, priority ore moved to the front of the queue
 [*][b]Assembler feeding[/b] - queued assemblers get pre-stocked with the exact ingots their queue needs, volume-capped and proportional so one ingredient can never flood the input and stall the queue
 [*][b]Assembler balancing[/b] - idle assemblers take over queued work from busy ones, fast assemblers never sit wasted (only this script's own queue entries get moved)
-[*][b]Ice balancing[/b] - even split across O2/H2 generators
+[*][b]Ice balancing[/b] - ice reactors (Helios) and irrigation first, the rest split across O2/H2 generators
 [*][b]Uranium balancing[/b] - fixed amount per reactor (100 large / 25 small)
 [*][b]Assembler cleanup[/b] - idle assemblers get emptied back into cargo
 [*][b]Sprite LCDs[/b] - dark flat UI with colored bars on every screen, auto-scrolling when content overflows

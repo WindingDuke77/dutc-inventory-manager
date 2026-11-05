@@ -133,27 +133,38 @@ bool Turrets()
 
 bool Ice()
 {
-    if (!iceBalancing || gens.Count + irrig.Count == 0) return true;
+    // power first, then farm water: ice reactors and Irrigation Systems (600 ice/min)
+    // keep their own conveyor pull, get topped up before any H2/O2 generator and
+    // are never drained back to storage (thanks EBALL360, Kantorock). Set before
+    // any early exit - older versions switched ice reactors' pull off
+    foreach (var r in iceReac) r.UseConveyorSystem = !iceBalancing || reactorIce <= 0;
+    if (!iceBalancing || gens.Count + irrig.Count + iceReac.Count == 0) return true;
     // balance EVERY ice-type ore, modded ones included (thanks aantono)
     var iceTypes = new List<MyItemType>();
     foreach (var kv in stock) if (IsIce(kv.Key)) iceTypes.Add(kv.Key);
     if (iceTypes.Count == 0) return true;
     foreach (var g in gens) g.UseConveyorSystem = false;
-    // farm water comes first: Irrigation Systems burn 600 ice/min, keep their own
-    // conveyor pull, get topped up before any H2/O2 generator and are never
-    // drained back to storage (thanks Kantorock)
     foreach (var g in irrig) g.UseConveyorSystem = true;
     foreach (var ice in iceTypes)
     {
         double left = CountOf(ice);
+        foreach (var r in iceReac)
+        {
+            var inv = r.GetInventory(0);
+            double cur = (double)inv.GetItemAmount(ice);
+            // a capped reactor holds exactly reactorIce, the rest goes back
+            if (reactorIce > 0 && cur > reactorIce + 100)
+            {
+                var w = DestFor(hadIce ? ICE : ORE, r, ice);
+                if (w != null) cur -= PushFrom(inv, ice, cur - reactorIce, w.GetInventory(0));
+            }
+            else cur = TopUp(r, ice, reactorIce);
+            left -= cur;
+            if (Runtime.CurrentInstructionCount > 30000) return true;
+        }
         foreach (var g in irrig)
         {
-            var inv = g.GetInventory(0);
-            double cur = (double)inv.GetItemAmount(ice);
-            double room = ((double)inv.MaxVolume - (double)inv.CurrentVolume) * 1000.0 / 0.37;
-            double want = irrigationIce > 0 ? Math.Min(irrigationIce - cur, room) : room;
-            if (want > 100) cur += PullTo(inv, ice, want, g);
-            left -= cur;
+            left -= TopUp(g, ice, irrigationIce);
             if (Runtime.CurrentInstructionCount > 30000) return true;
         }
         if (gens.Count == 0) continue;
@@ -178,6 +189,17 @@ bool Ice()
         }
     }
     return true;
+}
+
+// fill b with ice up to cap (0 = full), returns what it holds afterwards
+double TopUp(IMyTerminalBlock b, MyItemType ice, double cap)
+{
+    var inv = b.GetInventory(0);
+    double cur = (double)inv.GetItemAmount(ice);
+    double room = ((double)inv.MaxVolume - (double)inv.CurrentVolume) * 1000.0 / 0.37;
+    double want = cap > 0 ? Math.Min(cap - cur, room) : room;
+    if (want > 100 && Fits(inv, ice)) cur += PullTo(inv, ice, want, b);
+    return cur;
 }
 
 bool Uranium()

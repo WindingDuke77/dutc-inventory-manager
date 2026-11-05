@@ -97,7 +97,7 @@ void DrawMain(IMyTextSurface s, float us)
     f.Add(Txt("Assemblers " + assemblers.Count, off + new Vector2(W * 0.95f, y), 0.62f * sc, UI_DIM, TextAlignment.RIGHT));
     y += 24f * sc;
     f.Add(Txt("O2/H2 Gens " + gens.Count + (irrig.Count > 0 ? "  Irrig " + irrig.Count : ""), off + new Vector2(W * 0.05f, y), 0.62f * sc, UI_DIM, TextAlignment.LEFT));
-    f.Add(Txt("Reactors " + reactors.Count, off + new Vector2(W * 0.95f, y), 0.62f * sc, UI_DIM, TextAlignment.RIGHT));
+    f.Add(Txt("Reactors " + reactors.Count + (iceReac.Count > 0 ? " +" + iceReac.Count + " ice" : ""), off + new Vector2(W * 0.95f, y), 0.62f * sc, UI_DIM, TextAlignment.RIGHT));
     y += 24f * sc;
     f.Add(Txt("Tanks " + tanks.Count + "   Specials " + specials.Count, off + new Vector2(W * 0.05f, y), 0.62f * sc, UI_DIM, TextAlignment.LEFT));
     f.Add(Txt("Turrets " + guns.Count, off + new Vector2(W * 0.95f, y), 0.62f * sc, UI_DIM, TextAlignment.RIGHT));

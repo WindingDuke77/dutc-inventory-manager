@@ -112,6 +112,25 @@ bool Fits(IMyInventory inv, MyItemType t)
     try { return inv.CanItemsBeAdded(1, t); } catch { return true; }
 }
 
+// what a reactor burns, read from what its inventory accepts:
+// 0 = uranium, 1 = ice (Helios fusion etc.), 2 = some other modded fuel
+Dictionary<string,int> fuelKind = new Dictionary<string,int>();
+int ReactorFuel(IMyReactor r)
+{
+    string k = r.BlockDefinition.ToString();
+    int f;
+    if (fuelKind.TryGetValue(k, out f)) return f;
+    var inv = r.GetInventory(0);
+    var ur = MyItemType.MakeIngot("Uranium");
+    var ice = MyItemType.MakeOre("Ice");
+    // amount check first - a reactor filled to the brim refuses even its own fuel
+    if ((double)inv.GetItemAmount(ur) > 0 || Fits(inv, ur)) f = 0;
+    else if ((double)inv.GetItemAmount(ice) > 0 || Fits(inv, ice)) f = 1;
+    else return 2;   // not cached, checked again next scan
+    fuelKind[k] = f;
+    return f;
+}
+
 // one vanilla item per category: auto-assign only tags a box that can hold it
 MyItemType[] catProbe = {
     MyItemType.MakeOre("Iron"), MyItemType.MakeIngot("Iron"), MyItemType.MakeComponent("SteelPlate"),

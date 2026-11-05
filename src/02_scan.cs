@@ -53,7 +53,7 @@ bool Scan()
         }
         for (int i = 0; i < NCAT; i++) cats[i].Clear();
         allInv.Clear(); specials.Clear(); untagged.Clear();
-        refineries.Clear(); assemblers.Clear(); gens.Clear(); irrig.Clear(); reactors.Clear(); tanks.Clear(); guns.Clear();
+        refineries.Clear(); assemblers.Clear(); gens.Clear(); irrig.Clear(); reactors.Clear(); iceReac.Clear(); tanks.Clear(); guns.Clear();
         noSortGrids.Clear();
         mainHolders.Clear(); invHolders.Clear(); warnHolders.Clear(); actHolders.Clear();
         var conns = new List<IMyShipConnector>();
@@ -117,7 +117,18 @@ bool Scan()
         if (b is IMyRefinery) { if (!manual && same && b.IsWorking) refineries.Add((IMyRefinery)b); }
         else if (b is IMyAssembler) { if (!manual && same && b.IsWorking) assemblers.Add((IMyAssembler)b); }
         else if (b is IMyGasGenerator) { if (!manual && same && b.IsFunctional && ((IMyFunctionalBlock)b).Enabled) (MatchList(b, irrigationBlocks) ? irrig : gens).Add((IMyGasGenerator)b); }
-        else if (b is IMyReactor) { if (!manual && same && b.IsFunctional && ((IMyFunctionalBlock)b).Enabled) reactors.Add((IMyReactor)b); }
+        else if (b is IMyReactor)
+        {
+            if (!manual && same && b.IsFunctional && ((IMyFunctionalBlock)b).Enabled)
+            {
+                // only uranium reactors get the uranium treatment - it switched the
+                // conveyor pull off on ice reactors too and starved them (thanks EBALL360).
+                // Other modded fuels aren't managed and keep their own pull
+                var r = (IMyReactor)b;
+                int k = ReactorFuel(r);
+                if (k == 0) reactors.Add(r); else if (k == 1) iceReac.Add(r); else r.UseConveyorSystem = true;
+            }
+        }
         else if (b is IMyGasTank) { if (!manual && same && b.IsWorking) tanks.Add((IMyGasTank)b); }
         else if (b is IMyUserControllableGun) { if (!manual && b.IsFunctional) guns.Add((IMyUserControllableGun)b); }
         else if (b is IMyCargoContainer && same && !tagged && !storBlack && !n.Contains(HIDDEN_KEY)
