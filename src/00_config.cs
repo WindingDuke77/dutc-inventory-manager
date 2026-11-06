@@ -1,5 +1,5 @@
 // ========================================
-//         DUTC INVENTORY  v2.2.1
+//         DUTC INVENTORY  v2.3.0
 // ========================================
 // Sorting + even container balancing, auto container assignment, bottle filling
 // (works!), special loadout containers, autocrafting via Custom Data with sprite
@@ -25,6 +25,7 @@
 // 3. LCD tags (add to any LCD or cockpit name):
 //      DUTC-main  (or IIM-main)       = status overview
 //      DUTC-inv   (or IIM-inventory)  = item lists, filters in Custom Data
+//                   long list? add "DUTC-inv 2", "DUTC-inv 3"... with EMPTY Custom Data
 //      DUTC-warn  (or IIM-warnings)   = warnings
 //      DUTC-act   (or IIM-actions)    = action log
 //      Autocrafting                   = stock screen, edit wanted amounts in its CUSTOM DATA

@@ -131,13 +131,20 @@ int ReactorFuel(IMyReactor r)
     return f;
 }
 
-// one vanilla item per category: auto-assign only tags a box that can hold it
-MyItemType[] catProbe = {
+// one vanilla item per category: auto-assign only tags a box that can hold it.
+// Filled at the END of the constructor, not as a field initializer: MyItemType
+// needs the game's type table, and outside the game (pbcheck preview tool) a
+// throwing field initializer skips the whole constructor, leaving cats[] null.
+MyItemType[] catProbe;
+void InitProbes()
+{
+    catProbe = new MyItemType[] {
     MyItemType.MakeOre("Iron"), MyItemType.MakeIngot("Iron"), MyItemType.MakeComponent("SteelPlate"),
     MyItemType.MakeTool("WelderItem"), MyItemType.MakeAmmo("NATO_25x184mm"),
     new MyItemType("MyObjectBuilder_OxygenContainerObject", "OxygenBottle"),
     new MyItemType("MyObjectBuilder_ConsumableItem", "ClangCola"),
     MyItemType.MakeOre("Ice"), MyItemType.MakeIngot("Stone") };
+}
 
 bool Tankable(MyItemType t)
 {

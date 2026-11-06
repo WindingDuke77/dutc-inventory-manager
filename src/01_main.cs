@@ -88,6 +88,8 @@ public Program()
         }
     }
     Runtime.UpdateFrequency = UpdateFrequency.Update10;
+    // keep last - see catProbe in 07_helpers
+    InitProbes();
 }
 
 public void Save()

@@ -25,7 +25,6 @@ Issues and pull requests welcome - most fixes in this script came from the commu
 [*][b]Sprite LCDs[/b] - dark flat UI with colored bars on every screen, auto-scrolling when content overflows
 [*][b]Special containers[/b] - per-container loadouts with Normal / Minimum / Limiter / All modes
 [*][b]Performance friendly[/b] - work is spread over small resumable steps, safe on 1000+ inventory bases
-[*][b]No warning spam[/b] - storage blocks without conveyor ports (armories, lockers, freight racks) are skipped silently
 [/list]
 
 [h1]Setup[/h1]
@@ -40,7 +39,7 @@ Issues and pull requests welcome - most fixes in this script came from the commu
 Add the tag to any LCD or cockpit name:
 [list]
 [*][b]DUTC-main[/b] - status overview: fill bars per type, machine counts, queue, warnings, recent actions
-[*][b]DUTC-inv[/b] - item lists with bars. Filters go in the LCD's Custom Data (Component / Ingot / SteelPlate / regex...)
+[*][b]DUTC-inv[/b] - item lists with bars. Filters go in the LCD's Custom Data (Component / Ingot / SteelPlate / regex...). Long list? Add [b]DUTC-inv 2[/b], [b]DUTC-inv 3[/b]... with empty Custom Data and it continues onto them
 [*][b]DUTC-warn[/b] - numbered warnings
 [*][b]DUTC-act[/b] - timestamped log of every item moved
 [*][b]Autocrafting[/b] - crafting status screen; edit wanted amounts in its Custom Data

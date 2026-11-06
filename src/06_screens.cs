@@ -30,6 +30,8 @@ class UiRow
     public string val = "";
     public double frac = -1;  // <0 = no bar
     public Color col;
+    public bool wrap;         // kind 2 only: long text wraps onto extra lines
+    public int band;          // zebra stripe group (a wrapped row keeps one stripe)
 }
 
 // per-screen size override: "UIScale=0.8" in the block's Custom Data wins over
@@ -45,6 +47,7 @@ float UiScaleFor(IMyTerminalBlock b)
 bool Screens()
 {
     // many screens on a big base: drawing resumes next tick instead of overrunning
+    if (scrPos == 0) InvChains();
     int i = 0;
     for (int g = 0; g < 4; g++)
     {
@@ -52,6 +55,7 @@ bool Screens()
         foreach (var b in list)
         {
             if (i++ < scrPos) continue;
+            if (g == 3 && invFollow.Contains(b.EntityId)) continue;   // drawn by its chain's first screen
             if (Runtime.CurrentInstructionCount > 30000) { scrPos = i - 1; return false; }
             if (g == 0) { var s = SurfaceFor(b, MAIN_TAGS); if (s != null) DrawMain(s, UiScaleFor(b)); }
             else if (g == 1) { var s = SurfaceFor(b, WARN_TAGS); if (s != null) DrawList(s, "WARNINGS", WarnRows(), true, UiScaleFor(b)); }
@@ -120,6 +124,13 @@ void DrawMain(IMyTextSurface s, float us)
     f.Dispose();
 }
 
+// how many list rows one screen shows - DrawList's layout
+int ListFit(IMyTextSurface s, float us)
+{
+    float H = s.SurfaceSize.Y, sc = Math.Min(s.SurfaceSize.X, H) / 512f * us;
+    return Math.Max(1, (int)((H - 84f * sc) / (26f * sc)));
+}
+
 // Generic scrolling list screen. Scrolls automatically when content overflows.
 // Vertical spacing in PIXELS so tall/vertical LCDs don't stretch rows apart (thanks VFox32)
 void DrawList(IMyTextSurface s, string title, List<UiRow> rows, bool scrollOn, float us)
@@ -129,7 +140,21 @@ void DrawList(IMyTextSurface s, string title, List<UiRow> rows, bool scrollOn, f
     float W = size.X, H = size.Y, sc = Math.Min(W, H) / 512f * us;
     float rowPx = 26f * sc;
     float yStart = 66f * sc;
-    int maxRows = Math.Max(1, (int)((H - 18f * sc - yStart) / rowPx));
+    int maxRows = ListFit(s, us);
+    // long warnings used to be cut off mid-sentence - they wrap now (thanks SalazarWindriver)
+    var vis = new List<UiRow>();
+    for (int k = 0; k < rows.Count; k++)
+    {
+        var r = rows[k];
+        if (r.kind == 2 && r.wrap)
+        {
+            var parts = Wrap(s, r.name, 0.55f * sc, W * 0.86f);
+            for (int p = 0; p < parts.Count; p++)
+                vis.Add(new UiRow { kind = 2, name = (p > 0 ? "   " : "") + parts[p], col = r.col, band = k, wrap = true });
+        }
+        else { r.band = k; vis.Add(r); }
+    }
+    rows = vis;
     int total = rows.Count;
     int offR = 0;
     if (scrollOn && total > maxRows)
@@ -153,7 +178,7 @@ void DrawList(IMyTextSurface s, string title, List<UiRow> rows, bool scrollOn, f
     for (int i = offR; i < total && i < offR + maxRows; i++)
     {
         var r = rows[i];
-        if (r.kind != 0 && (i - offR) % 2 == 0) f.Add(Box(off + new Vector2(W * 0.5f, y + 10f * sc), new Vector2(W * 0.94f, 24f * sc), UI_PANEL));
+        if (r.kind != 0 && (r.band - rows[offR].band) % 2 == 0) f.Add(Box(off + new Vector2(W * 0.5f, y + 10f * sc), new Vector2(W * 0.94f, 24f * sc), UI_PANEL));
         if (r.kind == 0)
         {
             f.Add(Txt(r.name, off + new Vector2(W * 0.5f, y), 0.72f * sc, r.col));
@@ -167,7 +192,7 @@ void DrawList(IMyTextSurface s, string title, List<UiRow> rows, bool scrollOn, f
         }
         else
         {
-            f.Add(Txt(TruncS(r.name, maxCharsWide), off + new Vector2(W * 0.05f, y), 0.55f * sc, r.col, TextAlignment.LEFT));
+            f.Add(Txt(r.wrap ? r.name : TruncS(r.name, maxCharsWide), off + new Vector2(W * 0.05f, y), 0.55f * sc, r.col, TextAlignment.LEFT));
         }
         y += rowPx;
     }
@@ -179,7 +204,7 @@ List<UiRow> WarnRows()
 {
     var r = new List<UiRow>();
     for (int i = 0; i < warnings.Count; i++)
-        r.Add(new UiRow { kind = 2, name = (i + 1) + ". " + warnings[i].Replace("\n", " "), col = UI_TEXT });
+        r.Add(new UiRow { kind = 2, name = (i + 1) + ". " + warnings[i].Replace("\n", " "), col = UI_TEXT, wrap = true });
     if (warnings.Count == 0) r.Add(new UiRow { kind = 2, name = "No problems detected", col = UI_GOOD });
     return r;
 }
@@ -220,8 +245,10 @@ void WriteInv(IMyTerminalBlock b)
         var s = SurfaceFor(b, INV_TAGS);
         if (s == null) return;
         if (b.CustomData.Trim().Length == 0)
-            b.CustomData = "# DUTC-inv screen\n# One filter per line (type, item name or regex):\n#   Ore   Ingot   Component   AmmoMagazine\n#   SteelPlate   Iron   NATO\n# Options after the filter:\n#   <number> = bar max   noBar   hideEmpty   hideType   noHeading   noScroll\nComponent\n";
-        RenderInv(s, b.CustomData.Split('\n'), UiScaleFor(b));
+            b.CustomData = "# DUTC-inv screen\n# One filter per line (type, item name or regex):\n#   Ore   Ingot   Component   AmmoMagazine\n#   SteelPlate   Iron   NATO\n# Options after the filter:\n#   <number> = bar max   noBar   hideEmpty   hideType   noHeading   noScroll\n# Long list? Name more screens DUTC-inv 2, DUTC-inv 3... with EMPTY Custom Data\nComponent\n";
+        List<IMyTerminalBlock> chain;
+        invChain.TryGetValue(b.EntityId, out chain);
+        RenderInv(s, b.CustomData.Split('\n'), UiScaleFor(b), chain);
         return;
     }
     for (int i = 0; i < secIdx.Count; i++)
@@ -234,7 +261,7 @@ void WriteInv(IMyTerminalBlock b)
     }
 }
 
-void RenderInv(IMyTextSurface s, string[] lines, float us)
+void RenderInv(IMyTextSurface s, string[] lines, float us, List<IMyTerminalBlock> chain = null)
 {
     bool noScroll = false;
     var rows = new List<UiRow>();
@@ -305,7 +332,90 @@ void RenderInv(IMyTextSurface s, string[] lines, float us)
         rows.Add(new UiRow { kind = 2, name = "Or clear Custom Data completely", col = UI_TEXT });
         rows.Add(new UiRow { kind = 2, name = "for an automatic template.", col = UI_TEXT });
     }
-    DrawList(s, "ITEM STOCK", rows, !noScroll, us);
+    if (chain == null) { DrawList(s, "ITEM STOCK", rows, !noScroll, us); return; }
+    // the list runs on across the chained screens, the last one scrolls whatever is left
+    var surf = new List<IMyTextSurface> { s };
+    var scl = new List<float> { us };
+    foreach (var cb in chain) { var cs = SurfaceFor(cb, INV_TAGS); if (cs != null) { surf.Add(cs); scl.Add(UiScaleFor(cb)); } }
+    int pos = 0;
+    for (int k = 0; k < surf.Count; k++)
+    {
+        bool last = k == surf.Count - 1;
+        int n = Math.Max(0, last ? rows.Count - pos : Math.Min(ListFit(surf[k], scl[k]), rows.Count - pos));
+        DrawList(surf[k], "ITEM STOCK " + (k + 1) + "/" + surf.Count, rows.GetRange(pos, n), last && !noScroll, scl[k]);
+        pos += n;
+    }
+}
+
+// Inventory screens sharing a name apart from the number after the tag form one
+// long list: "Stock DUTC-inv", "Stock DUTC-inv 2", "Stock DUTC-inv 3"... The first
+// one holds the filters. A numbered screen only joins when its own Custom Data has
+// no filters, so separate numbered screens keep their own lists (thanks SalazarWindriver)
+Dictionary<long, List<IMyTerminalBlock>> invChain = new Dictionary<long, List<IMyTerminalBlock>>();
+HashSet<long> invFollow = new HashSet<long>();
+void InvChains()
+{
+    invChain.Clear(); invFollow.Clear();
+    var groups = new Dictionary<string, List<IMyTerminalBlock>>();
+    var num = new Dictionary<long, int>();
+    foreach (var b in invHolders)
+    {
+        foreach (var tag in INV_TAGS)
+        {
+            int p = b.CustomName.IndexOf(tag);
+            if (p < 0) continue;
+            var m = System.Text.RegularExpressions.Regex.Match(b.CustomName.Substring(p + tag.Length), @"^\s+(\d+)");
+            string key = m.Success ? b.CustomName.Substring(0, p + tag.Length) + b.CustomName.Substring(p + tag.Length + m.Length) : b.CustomName;
+            int n = 0;
+            if (m.Success) int.TryParse(m.Groups[1].Value, out n);
+            num[b.EntityId] = n;
+            List<IMyTerminalBlock> l;
+            if (!groups.TryGetValue(key, out l)) groups[key] = l = new List<IMyTerminalBlock>();
+            l.Add(b);
+            break;
+        }
+    }
+    foreach (var l in groups.Values)
+    {
+        if (l.Count < 2) continue;
+        l.Sort((a, z) => num[a.EntityId].CompareTo(num[z.EntityId]));
+        if (l[0].CustomData.Contains("@")) continue;
+        var fol = new List<IMyTerminalBlock>();
+        for (int i = 1; i < l.Count; i++)
+            if (NoFilters(l[i].CustomData)) { fol.Add(l[i]); invFollow.Add(l[i].EntityId); }
+        if (fol.Count > 0) invChain[l[0].EntityId] = fol;
+    }
+}
+
+// only comments and settings like UIScale=0.8 - no filter lines
+bool NoFilters(string cd)
+{
+    foreach (var raw in cd.Split('\n'))
+    {
+        var l = raw.Trim();
+        if (l.Length == 0 || l.StartsWith("#") || (l.Contains("=") && !l.Contains(" "))) continue;
+        return false;
+    }
+    return true;
+}
+
+// word wrap; the characters per line come from the real width of this text
+List<string> Wrap(IMyTextSurface s, string t, float scale, float maxW)
+{
+    var res = new List<string>();
+    float pw = 0;
+    try { pw = s.MeasureStringInPixels(new System.Text.StringBuilder(t), "White", scale).X; } catch { }
+    if (pw <= 0) pw = t.Length * 11.5f * scale;
+    int max = pw > 0 ? Math.Max(8, (int)(maxW * t.Length / pw)) : 8;
+    while (t.Length > max)
+    {
+        int cut = t.LastIndexOf(' ', max);
+        if (cut < max / 2) cut = max;   // one very long word: hard break
+        res.Add(t.Substring(0, cut).TrimEnd());
+        t = t.Substring(cut).TrimStart();
+    }
+    res.Add(t);
+    return res;
 }
 
 bool MatchItem(MyItemType t, string filt)
