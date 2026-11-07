@@ -7,7 +7,7 @@ bool Sort()
     var items = new List<MyInventoryItem>();
     for (; sortIdx < allInv.Count; sortIdx++)
     {
-        if (moved >= maxMovesPerTick || Runtime.CurrentInstructionCount > 35000) return false;
+        if (moved >= maxMovesPerTick || Runtime.CurrentInstructionCount > 35000 || Late()) return false;
         var b = allInv[sortIdx];
         if (b is IMyReactor) continue;
         if (b is IMyUserControllableGun) continue;
@@ -24,6 +24,7 @@ bool Sort()
         items.Clear(); inv.GetItems(items);
         for (int i = items.Count - 1; i >= 0; i--)
         {
+            if (Late()) return false;
             var it = items[i];
             int c = Cat(it.Type);
             if (c < 0) continue;
@@ -76,7 +77,7 @@ bool Balance()
         var totals = new Dictionary<MyItemType, double>();
         foreach (var w in cats[c])
         {
-            if (Runtime.CurrentInstructionCount > 30000) return true;
+            if (Runtime.CurrentInstructionCount > 30000 || Late()) return true;
             items.Clear(); w.GetInventory(0).GetItems(items);
             foreach (var it in items)
             {
@@ -102,14 +103,14 @@ bool Balance()
                     double pc = (double)pInv.GetItemAmount(t);
                     if (pc >= avg - tol) continue;
                     if (!HasSpace(pInv) || !Fits(pInv, t)) continue;
-                    if (Runtime.CurrentInstructionCount > 28000) return true;
+                    if (Runtime.CurrentInstructionCount > 28000 || Late()) return true;
                     double move = Math.Floor(Math.Min(cur - avg, avg - pc) + 0.001);
                     if (move < 1) continue;
                     cur -= PushFrom(rInv, t, move, pInv);
                     if (cur <= avg + tol) break;
                 }
             }
-            if (Runtime.CurrentInstructionCount > 30000) return true;
+            if (Runtime.CurrentInstructionCount > 30000 || Late()) return true;
         }
     }
     return true;
@@ -120,8 +121,9 @@ bool SpecialFill()
 {
     for (; specialIdx < specials.Count; specialIdx++)
     {
-        if (Runtime.CurrentInstructionCount > 30000) return false;
+        if (Runtime.CurrentInstructionCount > 30000 || Late()) return false;
         var b = specials[specialIdx];
+        if (!Island(b)) continue;
         var inv = b.GetInventory(0);
         foreach (var raw in b.CustomData.Split('\n'))
         {

@@ -114,13 +114,16 @@ bool Turrets()
     if (ammoTypes.Count == 0) { gunIdx = 0; return true; }
     for (; gunIdx < guns.Count; gunIdx++)
     {
-        if (Runtime.CurrentInstructionCount > 25000) return false;
+        if (Runtime.CurrentInstructionCount > 25000 || Late()) return false;
         var g = guns[gunIdx];
         if (g.Closed) continue;
+        // a gun the conveyors can't reach cost a failed path search per ammo source,
+        // per gun, every pass - enough to run past the time limit (thanks EBALL360)
+        if (!Reachable(g)) continue;
         var inv = g.GetInventory(0);
         foreach (var t in ammoTypes)
         {
-            if (Runtime.CurrentInstructionCount > 30000) return false;
+            if (Runtime.CurrentInstructionCount > 30000 || Late()) return false;
             if (!inv.CanItemsBeAdded(1, t)) continue;
             double cur = (double)inv.GetItemAmount(t);
             if (cur >= magsPerTurret - 0.01) continue;

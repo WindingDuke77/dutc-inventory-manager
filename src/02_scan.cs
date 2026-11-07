@@ -13,7 +13,6 @@ bool Scan()
     {
         cycles++;
         warnings.Clear(); warnSet.Clear();
-        reachBudget = 5;
         // conveyor path results are cached; refresh them every ~5 minutes
         if (cycles % 150 == 0) { convCache.Clear(); reachCache.Clear(); }
 
@@ -28,6 +27,7 @@ bool Scan()
         if (mym.Success) Me.CustomData = Me.CustomData.Replace(mym.Value, myMark);
         else Me.CustomData = myMark + "\n" + Me.CustomData;
         standby = false; masterName = "";
+        otherGrids.Clear();
         var pbs = new List<IMyProgrammableBlock>();
         GridTerminalSystem.GetBlocksOfType(pbs, p => p != Me && p.IsWorking && p.CustomData.Contains("[DUTC-INV-ACTIVE"));
         foreach (var p in pbs)
@@ -39,16 +39,18 @@ bool Scan()
             if (beat == lastB) age++; else age = 0;
             beatSeen[p.EntityId] = beat; beatAge[p.EntityId] = age;
             if (age >= 5) continue;
+            // an instance on another conveyor network runs that network - it can't
+            // take over ours, and its own grid's screens are left to it
+            if (!Linked(p)) { otherGrids.Add(p.CubeGrid); continue; }
             bool meStatic = Me.CubeGrid.IsStatic;
             bool otherStatic = p.CubeGrid.IsStatic;
             bool otherWins;
             if (otherStatic != meStatic) otherWins = otherStatic;
             else otherWins = p.EntityId < Me.EntityId;
-            if (otherWins)
+            if (otherWins && !standby)
             {
                 standby = true;
                 masterName = p.CustomName + " on '" + p.CubeGrid.CustomName + "'";
-                break;
             }
         }
         for (int i = 0; i < NCAT; i++) cats[i].Clear();
@@ -81,7 +83,7 @@ bool Scan()
         if (processed >= scanChunk || Runtime.CurrentInstructionCount > 30000) return false;
         var b = scanBlocks[scanPos];
         bool same = b.IsSameConstructAs(Me);
-        if (same)
+        if (same && !otherGrids.Contains(b.CubeGrid))
         {
             if (HasTag(b, MAIN_TAGS)) mainHolders.Add(b);
             if (HasTag(b, INV_TAGS)) invHolders.Add(b);
@@ -106,6 +108,9 @@ bool Scan()
         bool manual = n.Contains(MANUAL_KEY);
         if (n.Contains(SPECIAL_KEY)) { specials.Add(b); EnsureSpecialTemplate(b); continue; }
         allInv.Add(b);
+        // blocks known to be on another conveyor network still count as stock but
+        // are never type containers or machines of ours (thanks EBALL360)
+        same = same && Island(b);
         bool tagged = false;
         // machines can't be type containers - a "Food Processor" contains the word
         // Food but must never be treated as the Food storage (thanks Oxnard)
@@ -130,7 +135,7 @@ bool Scan()
             }
         }
         else if (b is IMyGasTank) { if (!manual && same && b.IsWorking) tanks.Add((IMyGasTank)b); }
-        else if (b is IMyUserControllableGun) { if (!manual && b.IsFunctional) guns.Add((IMyUserControllableGun)b); }
+        else if (b is IMyUserControllableGun) { if (!manual && b.IsFunctional && Island(b)) guns.Add((IMyUserControllableGun)b); }
         else if (b is IMyCargoContainer && same && !tagged && !storBlack && !n.Contains(HIDDEN_KEY)
                  && (storageWhitelist.Length == 0 || MatchList(b, storageWhitelist))) untagged.Add((IMyCargoContainer)b);
     }
@@ -151,6 +156,16 @@ bool Scan()
         foreach (var d in distinctAsm) if (d.BlockDefinition.ToString() == a.BlockDefinition.ToString()) { dup = true; break; }
         if (!dup) distinctAsm.Add(a);
     }
+    // home network = where this PB lives: a type container on its own grid, else a
+    // machine or connector there, else the oldest type container. Kept while valid -
+    // a new home drops every cached reachability result
+    var h = home != null && !home.Closed && home.CubeGrid == Me.CubeGrid ? home : null;
+    for (int c = 0; c < NCAT && h == null; c++) foreach (var w in cats[c]) if (w.CubeGrid == Me.CubeGrid) { h = w; break; }
+    if (h == null) foreach (var b in allInv) if (b.CubeGrid == Me.CubeGrid && (b is IMyProductionBlock || b is IMyShipConnector)) { h = b; break; }
+    if (h == null) for (int c = 0; c < NCAT; c++) foreach (var w in cats[c]) if (h == null || w.EntityId < h.EntityId) h = w;
+    long hid = h == null ? 0 : h.EntityId;
+    if (hid != homeId) { homeId = hid; reachCache.Clear(); }
+    home = h;
     for (int c = 0; c < NCAT; c++) cats[c].Sort((a, z) => a.CustomName.CompareTo(z.CustomName));
     // precomputed sort keys - the old comparator called GetInventory on every
     // compare, which alone could overrun on hundreds of untagged containers
@@ -158,7 +173,7 @@ bool Scan()
     foreach (var u in untagged) vol[u.EntityId] = (double)u.GetInventory(0).MaxVolume;
     untagged.Sort((a, z) => vol[z.EntityId].CompareTo(vol[a.EntityId]));
     craftLCDs.Clear();
-    GridTerminalSystem.GetBlocksOfType(craftLCDs, p => p.IsSameConstructAs(Me) && p.CustomName.Contains(CRAFT_KEY));
+    GridTerminalSystem.GetBlocksOfType(craftLCDs, p => p.IsSameConstructAs(Me) && !otherGrids.Contains(p.CubeGrid) && p.CustomName.Contains(CRAFT_KEY));
     // "Autocrafting 1", "Autocrafting 2"... panels follow the number AFTER the
     // keyword, whatever the rest of the block name looks like (thanks Lord Byte)
     craftLCDs.Sort((a, z) => { int na = CraftOrd(a.CustomName), nz = CraftOrd(z.CustomName); return na != nz ? na.CompareTo(nz) : a.CustomName.CompareTo(z.CustomName); });
@@ -190,15 +205,16 @@ bool Count()
         var list = countPass == 0 ? allInv : specials;
         for (; countPos < list.Count; countPos++)
         {
-            if (Runtime.CurrentInstructionCount > 32000) return false;
+            if (Runtime.CurrentInstructionCount > 32000 || Late()) return false;
             var b = list[countPos];
             if (b.CustomName.Contains(HIDDEN_KEY)) continue;
             // craftStock is what autocraft quotas see: by default docked ships don't
             // count (their stock leaves with them), turrets and Specials are
             // configurable (thanks Papa Murderdolls). A connector-joined STATION
             // grid can't fly off - it's part of the base and always counts,
-            // or quotas get crafted again on top of it (thanks Kantorock)
-            bool forCraft = (craftCountDocked || b.IsSameConstructAs(Me) || b.CubeGrid.IsStatic)
+            // or quotas get crafted again on top of it (thanks Kantorock).
+            // Stock on another conveyor network belongs to that network (thanks EBALL360)
+            bool forCraft = (craftCountDocked || b.IsSameConstructAs(Me) || b.CubeGrid.IsStatic) && Island(b)
                 && (craftCountGuns || !(b is IMyUserControllableGun))
                 && (countPass == 0 || craftCountSpecials);
             for (int q = 0; q < b.InventoryCount; q++)
@@ -242,7 +258,6 @@ bool Assign()
 {
     if (autoAssignContainers)
     {
-        reachBudget = 3;
         for (int c = 0; c < NCAT; c++)
         {
             if (c == ICE || c == GRAVEL) continue;   // opt-in, never auto-assigned

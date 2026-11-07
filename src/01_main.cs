@@ -50,6 +50,10 @@ int scrPos = 0;
 Dictionary<long,bool> convCache = new Dictionary<long,bool>();
 Dictionary<long,bool> reachCache = new Dictionary<long,bool>();
 int reachBudget = 0;
+DateTime runStart;
+IMyTerminalBlock home;
+long homeId = 0;
+HashSet<IMyCubeGrid> otherGrids = new HashSet<IMyCubeGrid>();
 int step = 0;
 int sortIdx = 0;
 int gunIdx = 0;
@@ -122,6 +126,8 @@ public void Main(string arg)
     if (lastError != "") Echo("Last error: " + lastError);
     if (report != "") Echo("\n" + report);
     if (paused) { Echo("PAUSED - run with 'resume'"); return; }
+    runStart = DateTime.UtcNow;
+    reachBudget = 5;
     try
     {
         bool done = DoStep(step);
@@ -139,8 +145,9 @@ bool DoStep(int s)
 {
     // standby (another instance is the active manager): keep scanning, counting,
     // balancing of OWN containers, own-grid machine refills and screens -
-    // but no sorting/assigning/crafting/specials
-    if (standby && (s == 2 || s == 3 || s == 5 || s == 6)) return true;
+    // but no sorting/assigning/crafting/specials, and no turrets: the active
+    // instance loads every gun already (thanks EBALL360)
+    if (standby && (s == 2 || s == 3 || s == 5 || s == 6 || s == 10)) return true;
     switch (s)
     {
         case 0: return Scan();

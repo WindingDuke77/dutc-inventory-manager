@@ -74,24 +74,43 @@ bool CanMove(IMyInventory src, long srcId, IMyInventory dst, long dstId, MyItemT
     return ok;
 }
 
-// can this block's inventory actually reach the conveyor network?
-// cached + budgeted: at most a few live probes per cycle, rest deferred
+// conveyor path checks and big transfers run inside the game and don't count
+// toward the instruction limit - a 1400-inventory base ran past the time limit
+// in one run (thanks EBALL360). Loops stop here and carry on next run.
+bool Late() { return (DateTime.UtcNow - runStart).TotalMilliseconds > runBudgetMs; }
+
+// can this block's inventory reach this PB's home network (picked in Scan)?
+// cached + budgeted: a few live probes per run, rest deferred
 bool Reachable(IMyTerminalBlock b)
 {
     bool v;
     if (reachCache.TryGetValue(b.EntityId, out v)) return v;
-    if (reachBudget <= 0) return false;
+    if (reachBudget <= 0 || Late()) return false;
     reachBudget--;
-    IMyInventory refInv = null;
-    for (int c = 0; c < NCAT; c++)
-    {
-        if (cats[c].Count > 0 && cats[c][0] != b) { refInv = cats[c][0].GetInventory(0); break; }
-    }
-    if (refInv == null) refInv = Me.GetInventory(0);
-    try { v = b.GetInventory(0).IsConnectedTo(refInv); }
-    catch { v = true; }
+    if (home == null || home == b || home.Closed) v = true;
+    else try { v = b.GetInventory(0).IsConnectedTo(home.GetInventory(0)); } catch { v = true; }
     reachCache[b.EntityId] = v;
     return v;
+}
+
+// false only for blocks KNOWN to sit on another conveyor network
+bool Island(IMyTerminalBlock b) { bool v; return !reachCache.TryGetValue(b.EntityId, out v) || v; }
+
+// does another running instance share our conveyor network? Grids attached
+// without one (space elevator tether...) each keep their own active manager
+// instead of one standing by for a manager that can't reach it (thanks EBALL360)
+bool Linked(IMyProgrammableBlock p)
+{
+    IMyTerminalBlock any = null;
+    foreach (var b in allInv)
+    {
+        if (b.CubeGrid != p.CubeGrid) continue;
+        if (b is IMyProductionBlock || b is IMyShipConnector) { any = b; break; }
+        if (any == null) any = b;
+    }
+    if (any == null) return true;
+    Reachable(any);
+    return Island(any);
 }
 
 // with an item type, containers whose inventory refuses it are skipped -
@@ -100,7 +119,7 @@ IMyTerminalBlock DestFor(int c, IMyTerminalBlock exclude, MyItemType? t = null)
 {
     foreach (var w in cats[c])
     {
-        if (w == exclude) continue;
+        if (w == exclude || !Island(w)) continue;
         var inv = w.GetInventory(0);
         if (HasSpace(inv) && (t == null || Fits(inv, t.Value))) return w;
     }
@@ -179,8 +198,8 @@ double PullTo(IMyInventory dst, MyItemType t, double amount, IMyTerminalBlock ex
         var list = (pass == 0 && c >= 0) ? cats[c] : allInv;
         foreach (var b in list)
         {
-            if (Runtime.CurrentInstructionCount > 42000) return got;
-            if (b == exclude) continue;
+            if (Runtime.CurrentInstructionCount > 42000 || Late()) return got;
+            if (b == exclude || !Island(b)) continue;
             if (pass == 1 && c >= 0 && IsCat(b, c)) continue;
             if (b is IMyReactor) continue;
             if (b is IMyGasGenerator && IsIce(t)) continue;

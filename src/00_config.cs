@@ -1,5 +1,5 @@
 // ========================================
-//         DUTC INVENTORY  v2.3.0
+//         DUTC INVENTORY  v2.4.0
 // ========================================
 // Sorting + even container balancing, auto container assignment, bottle filling
 // (works!), special loadout containers, autocrafting via Custom Data with sprite
@@ -37,6 +37,8 @@
 // 5. Multiple grids each running this script can dock safely: they elect ONE
 //    active manager automatically (station beats ship, then lowest id wins).
 //    The other instance goes standby but keeps its screens and machine refills.
+//    Grids attached WITHOUT a conveyor link (space elevator tether...) each keep
+//    their own active instance that manages its own conveyor network.
 //
 // ---------------- CONFIG ----------------
 
@@ -147,5 +149,7 @@ string[] ACT_TAGS  = { "DUTC-act", "IIM-actions" };
 
 int maxMovesPerTick = 25;           // sorting transfers per run (performance)
 int scanChunk = 250;                // blocks processed per tick while scanning (big-base safety)
+double runBudgetMs = 8;             // real time per run before work continues next run: conveyor path
+                                    // checks run inside the game and don't count toward the 50k limit
 
 // ==== SCRIPT BODY (do not edit below) ====

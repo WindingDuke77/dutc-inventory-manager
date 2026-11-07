@@ -56,7 +56,7 @@ bool Screens()
         {
             if (i++ < scrPos) continue;
             if (g == 3 && invFollow.Contains(b.EntityId)) continue;   // drawn by its chain's first screen
-            if (Runtime.CurrentInstructionCount > 30000) { scrPos = i - 1; return false; }
+            if (Runtime.CurrentInstructionCount > 30000 || Late()) { scrPos = i - 1; return false; }
             if (g == 0) { var s = SurfaceFor(b, MAIN_TAGS); if (s != null) DrawMain(s, UiScaleFor(b)); }
             else if (g == 1) { var s = SurfaceFor(b, WARN_TAGS); if (s != null) DrawList(s, "WARNINGS", WarnRows(), true, UiScaleFor(b)); }
             else if (g == 2) { var s = SurfaceFor(b, ACT_TAGS); if (s != null) DrawList(s, "ACTIONS", ActRows(), true, UiScaleFor(b)); }

@@ -75,7 +75,7 @@ Multiple screens? Name them [b]Autocrafting 1[/b], [b]Autocrafting 2[/b]... - th
 [list]
 [*][b]Build Planner works remotely[/b] - the script never cancels queue entries it didn't create, so planner orders survive and get their ingots fed
 [*][b]Nanobot Build & Repair[/b] - BaR blocks are auto-detected and fully hands-off: their inventories and assembler queues are never touched
-[*][b]Multiple instances[/b] - a base and a docked ship can each run this script; they elect one active manager (station beats ship), the other keeps its screens and machine refills
+[*][b]Multiple instances[/b] - a base and a docked ship can both run it: one active manager (station beats ship), the other keeps screens and refills. Grids without a conveyor link (tethers) each stay active
 [/list]
 
 [h1]Isy's IIM Compatible[/h1]
