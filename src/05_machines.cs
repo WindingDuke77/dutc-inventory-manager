@@ -10,6 +10,16 @@ bool IngotFull(string ore)
     return CountOfCraft(MyItemType.MakeIngot(ing)) >= t;
 }
 
+// queue rank of an ore: its orePriority spot, unknown ores last, and ore whose
+// ingot target is met behind everything else - it used to keep its spot at the
+// front of a refinery's queue (thanks Kayn)
+int OreRank(string ore)
+{
+    int pr = orePriority.IndexOf(ore);
+    if (pr < 0) pr = 999;
+    return IngotFull(ore) ? 1000 + pr : pr;
+}
+
 bool Refine()
 {
     if (refineries.Count == 0) return true;
@@ -37,8 +47,7 @@ bool Refine()
                 int best = int.MaxValue, bi = -1;
                 for (int i = 0; i < items.Count; i++)
                 {
-                    int pr = orePriority.IndexOf(items[i].Type.SubtypeId);
-                    if (pr < 0) pr = 999;
+                    int pr = OreRank(items[i].Type.SubtypeId);
                     if (pr < best) { best = pr; bi = i; }
                 }
                 if (bi > 0) inv.TransferItemTo(inv, bi, 0, true);
@@ -60,9 +69,7 @@ bool Refine()
                 {
                     for (int i = items.Count - 1; i >= 1; i--)
                     {
-                        int pr = orePriority.IndexOf(items[i].Type.SubtypeId);
-                        if (pr < 0) pr = 999;
-                        if (pr <= bestAvail) continue;
+                        if (OreRank(items[i].Type.SubtypeId) <= bestAvail) continue;
                         var w = DestFor(ORE, r, items[i].Type);
                         if (w == null) break;
                         PushFrom(inv, items[i].Type, (double)items[i].Amount, w.GetInventory(0));

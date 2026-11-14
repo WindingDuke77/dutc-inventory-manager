@@ -46,6 +46,7 @@ Dictionary<MyItemType,double> stockTmp = new Dictionary<MyItemType,double>();
 HashSet<string> quickMiss = new HashSet<string>();
 HashSet<long> ourDisAsm = new HashSet<long>();
 int specialIdx = 0;
+int shipMode = 0, unIdx = 0;   // 1 = "unload" running, 2 = "load" running
 int scrPos = 0;
 Dictionary<long,bool> convCache = new Dictionary<long,bool>();
 Dictionary<long,bool> reachCache = new Dictionary<long,bool>();
@@ -116,6 +117,8 @@ public void Main(string arg)
     if (arg.StartsWith("items ")) ItemsCmd(raw.Substring(6).Trim());
     if (arg.StartsWith("bp ")) BpProbeCmd(raw.Substring(3).Trim());
     if (arg == "bps") BpsCmd();
+    if (arg == "unload") { shipMode = 1; unIdx = 0; }
+    if (arg == "load") { shipMode = 2; specialIdx = 0; }
     if (arg == "reset") { bpCache.Clear(); noBp.Clear(); probePos.Clear(); convCache.Clear(); reachCache.Clear(); barCache.Clear(); quickMiss.Clear(); catCache.Clear(); learnedBps.Clear(); learnedSet.Clear(); blindMade.Clear(); Storage = ""; lastError = ""; report = ""; }
     tick++;
     Echo("DUTC INVENTORY " + "|/-\\"[tick % 4]);
@@ -123,6 +126,7 @@ public void Main(string arg)
     Echo("Inventories: " + allInv.Count + "  Specials: " + specials.Count);
     Echo("Warnings: " + warnings.Count);
     if (standby) Echo("STANDBY - sorting handled by:\n" + masterName);
+    if (shipMode > 0) Echo(shipMode == 1 ? "UNLOADING..." : "LOADING...");
     if (lastError != "") Echo("Last error: " + lastError);
     if (report != "") Echo("\n" + report);
     if (paused) { Echo("PAUSED - run with 'resume'"); return; }
@@ -147,6 +151,10 @@ bool DoStep(int s)
     // balancing of OWN containers, own-grid machine refills and screens -
     // but no sorting/assigning/crafting/specials, and no turrets: the active
     // instance loads every gun already (thanks EBALL360)
+    // "unload" / "load" on a ship's PB run even in standby: unload replaces this
+    // pass's sorting, load is one Special fill of the ship's own containers
+    if (shipMode == 1 && s == 3) return Unload();
+    if (shipMode == 2 && s == 5) { if (!SpecialFill()) return false; shipMode = 0; Act("Load done"); return true; }
     if (standby && (s == 2 || s == 3 || s == 5 || s == 6 || s == 10)) return true;
     switch (s)
     {

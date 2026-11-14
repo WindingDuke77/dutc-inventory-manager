@@ -64,6 +64,44 @@ bool Sort()
     return true;
 }
 
+// "unload" on a ship's PB: everything in this grid's cargo and connectors goes to
+// the docked grid's cargo (its matching type container first) - the ship's own
+// type tags included. Specials keep their loadout (thanks EBALL360)
+bool Unload()
+{
+    var away = new List<IMyTerminalBlock>();
+    foreach (var w in allInv) if (w is IMyCargoContainer && !w.IsSameConstructAs(Me) && Island(w)) away.Add(w);
+    if (away.Count == 0) { Warn("Unload: no docked grid with cargo in reach"); shipMode = 0; return true; }
+    var items = new List<MyInventoryItem>();
+    for (; unIdx < allInv.Count; unIdx++)
+    {
+        var b = allInv[unIdx];
+        if (!b.IsSameConstructAs(Me) || !(b is IMyCargoContainer || b is IMyShipConnector) || b.CustomName.Contains(HIDDEN_KEY)) continue;
+        var inv = b.GetInventory(0);
+        items.Clear(); inv.GetItems(items);
+        for (int i = items.Count - 1; i >= 0; i--)
+        {
+            if (Runtime.CurrentInstructionCount > 40000 || Late()) return false;
+            var t = items[i].Type;
+            int c = Cat(t);
+            IMyTerminalBlock dst = null;
+            foreach (var w in away)
+            {
+                var wi = w.GetInventory(0);
+                if (!HasSpace(wi) || !Fits(wi, t)) continue;
+                dst = w;
+                if (c >= 0 && w.CustomName.Contains(catKeys[c])) break;
+            }
+            if (dst == null) { Warn("Unload: docked grid is full"); shipMode = 0; return true; }
+            if (CanMove(inv, b.EntityId, dst.GetInventory(0), dst.EntityId, t) && inv.TransferItemTo(dst.GetInventory(0), i, null, true))
+                Act(t.SubtypeId + ": " + StripPct(b.CustomName) + " -> " + StripPct(dst.CustomName));
+        }
+    }
+    Act("Unload done");
+    shipMode = 0;
+    return true;
+}
+
 // Even split: every item spread equally across all containers of its type.
 // 9 tools in 3 Tools containers -> 3 each.
 bool Balance()
@@ -123,7 +161,7 @@ bool SpecialFill()
     {
         if (Runtime.CurrentInstructionCount > 30000 || Late()) return false;
         var b = specials[specialIdx];
-        if (!Island(b)) continue;
+        if (!Island(b) || (shipMode == 2 && !b.IsSameConstructAs(Me))) continue;
         var inv = b.GetInventory(0);
         foreach (var raw in b.CustomData.Split('\n'))
         {

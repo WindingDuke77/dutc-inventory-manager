@@ -1,22 +1,11 @@
 // ========================================
-//         DUTC INVENTORY  v2.4.0
+//         DUTC INVENTORY  v2.5.0
 // ========================================
-// Sorting + even container balancing, auto container assignment, bottle filling
-// (works!), special loadout containers, autocrafting via Custom Data with sprite
-// status screen, refinery feeding + ore balancing + queue priority, ice balancing
-// (ice reactors + farm irrigation first), uranium balancing, turret ammo loading (subgrids +
-// docked ships), assembler
-// feeding + cleanup, sprite LCDs with auto-scroll, multi-instance election
-// (station beats ship), Nanobot Build & Repair fully hands-off.
-//
-// BACKWARD COMPATIBLE WITH ISY'S INVENTORY MANAGER:
-//   - Same container keywords: Ores/Ingots/Components/Tools/Ammo/Bottles
-//   - Same block keywords: Special, Locked, Hidden, !manual
-//   - Same connector keywords: [No Sorting] and [No IIM]
-//   - IIM LCD tags work: IIM-main, IIM-inventory, IIM-warnings, IIM-actions
-//     (also reads IIM-style "@0 IIM-inventory" sections in Custom Data)
-//   - IIM special container lines work: Component/SteelPlate=100, 100M, 100L, All
-//   - IIM autocrafting LCD text format works: "SteelPlate 123 = 5000"
+// One script runs the base: sorting, autocrafting, refineries, ice, uranium,
+// turret ammo, bottles and sprite LCDs. Drop-in for Isy's IIM setups (same
+// keywords, LCD tags, Special and autocrafting formats).
+// Full guide: Steam Workshop page "DUTC Inventory Manager"
+// Source: github.com/WindingDuke77/dutc-inventory-manager
 //
 // QUICK START
 // 1. Paste into a Programmable Block. Runs by itself, no argument needed.
@@ -34,6 +23,8 @@
 //      items <text>  = list stock item ids matching the text (find exact names)
 //      bp <name>     = probe a blueprint name + show visible assembler types
 //      bps           = list blueprints seen queued by hand (exact names to copy)
+//      unload / load = on a docked ship's PB: empty its cargo into the other grid /
+//                      fill its Special containers from the other grid right now
 // 5. Multiple grids each running this script can dock safely: they elect ONE
 //    active manager automatically (station beats ship, then lowest id wins).
 //    The other instance goes standby but keeps its screens and machine refills.

@@ -208,7 +208,7 @@ double PullTo(IMyInventory dst, MyItemType t, double amount, IMyTerminalBlock ex
             if (excludeGrinders && b is IMyShipGrinder) continue;
             if (excludeDrills && b is IMyShipDrill) continue;
             if (b.CustomName.Contains(HIDDEN_KEY)) continue;
-            if (c >= 0 && !b.IsSameConstructAs(Me) && b.CustomName.Contains(catKeys[c])) continue;
+            if (c >= 0 && shipMode != 2 && !b.IsSameConstructAs(Me) && b.CustomName.Contains(catKeys[c])) continue;
             var inv = b.GetInventory(SrcInvIndex(b));
             if ((double)inv.GetItemAmount(t) <= 0) continue;
             if (!CanMove(inv, b.EntityId, dst, dstId, t)) continue;
