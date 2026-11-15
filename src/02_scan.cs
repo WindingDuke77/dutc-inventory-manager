@@ -119,7 +119,7 @@ bool Scan()
         if (same && storageBlock && !storBlack)
             for (int c = 0; c < NCAT; c++)
                 if (n.Contains(catKeys[c])) { cats[c].Add(b); tagged = true; }
-        if (b is IMyRefinery) { if (!manual && same && b.IsWorking) refineries.Add((IMyRefinery)b); }
+        if (b is IMyRefinery) { if (!manual && same && b.IsWorking && OreRefinery(b)) refineries.Add((IMyRefinery)b); }
         else if (b is IMyAssembler) { if (!manual && same && b.IsWorking) assemblers.Add((IMyAssembler)b); }
         else if (b is IMyGasGenerator) { if (!manual && same && b.IsFunctional && ((IMyFunctionalBlock)b).Enabled) (MatchList(b, irrigationBlocks) ? irrig : gens).Add((IMyGasGenerator)b); }
         else if (b is IMyReactor)

@@ -131,6 +131,15 @@ bool Fits(IMyInventory inv, MyItemType t)
     try { return inv.CanItemsBeAdded(1, t); } catch { return true; }
 }
 
+// item types an inventory takes, read from its whitelist (free space doesn't matter);
+// -1 if the game can't say
+int Accepts(IMyInventory inv, Func<MyItemType,bool> f = null)
+{
+    var l = new List<MyItemType>();
+    try { inv.GetAcceptedItems(l, f); } catch { return -1; }
+    return l.Count;
+}
+
 // what a reactor burns, read from what its inventory accepts:
 // 0 = uranium, 1 = ice (Helios fusion etc.), 2 = some other modded fuel
 Dictionary<string,int> fuelKind = new Dictionary<string,int>();
@@ -140,6 +149,10 @@ int ReactorFuel(IMyReactor r)
     int f;
     if (fuelKind.TryGetValue(k, out f)) return f;
     var inv = r.GetInventory(0);
+    // a reactor taking several fuels stocks itself (TD Dual-Fuel Power Core pulls
+    // deuterium + uranium to its own Keep sliders): the uranium cap switched its pull
+    // off, so it never got deuterium and ran at 60% (thanks EBALL360)
+    if (Accepts(inv) > 1) { fuelKind[k] = 2; return 2; }
     var ur = MyItemType.MakeIngot("Uranium");
     var ice = MyItemType.MakeOre("Ice");
     // amount check first - a reactor filled to the brim refuses even its own fuel
@@ -148,6 +161,19 @@ int ReactorFuel(IMyReactor r)
     else return 2;   // not cached, checked again next scan
     fuelKind[k] = f;
     return f;
+}
+
+// refineries that can't take iron ore (Deuterium Processor and other special mods) run on
+// their own conveyor pull: feeding them by ore priority stuffed them with Stone (thanks EBALL360)
+Dictionary<string,bool> oreRef = new Dictionary<string,bool>();
+bool OreRefinery(IMyTerminalBlock b)
+{
+    string k = b.BlockDefinition.ToString();
+    bool v;
+    if (oreRef.TryGetValue(k, out v)) return v;
+    v = Accepts(b.GetInventory(0), t => t.SubtypeId == "Iron" && t.TypeId.EndsWith("_Ore")) != 0;
+    oreRef[k] = v;
+    return v;
 }
 
 // one vanilla item per category: auto-assign only tags a box that can hold it.
