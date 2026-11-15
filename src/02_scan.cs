@@ -156,13 +156,28 @@ bool Scan()
         foreach (var d in distinctAsm) if (d.BlockDefinition.ToString() == a.BlockDefinition.ToString()) { dup = true; break; }
         if (!dup) distinctAsm.Add(a);
     }
-    // home network = where this PB lives: a type container on its own grid, else a
-    // machine or connector there, else the oldest type container. Kept while valid -
-    // a new home drops every cached reachability result
-    var h = home != null && !home.Closed && home.CubeGrid == Me.CubeGrid ? home : null;
-    for (int c = 0; c < NCAT && h == null; c++) foreach (var w in cats[c]) if (w.CubeGrid == Me.CubeGrid) { h = w; break; }
-    if (h == null) foreach (var b in allInv) if (b.CubeGrid == Me.CubeGrid && (b is IMyProductionBlock || b is IMyShipConnector)) { h = b; break; }
-    if (h == null) for (int c = 0; c < NCAT; c++) foreach (var w in cats[c]) if (h == null || w.EntityId < h.EntityId) h = w;
+    // home network = where this PB's storage lives: a type container on the PB's own
+    // grid that shares conveyors with another type container (or is the only one),
+    // else the oldest type container. Machines and connectors on the PB's grid were
+    // a fallback too - on a rotor subgrid those are often cut off from the base and
+    // then nothing got sorted at all (thanks 0micron). Kept while it stays a type
+    // container - a new home drops every cached reachability result
+    var box = new List<IMyTerminalBlock>();
+    for (int c = 0; c < NCAT; c++) foreach (var w in cats[c]) if (!box.Contains(w)) box.Add(w);
+    var h = home != null && !home.Closed && box.Contains(home) ? home : null;
+    foreach (var w in box)
+    {
+        if (h != null) break;
+        if (w.CubeGrid != Me.CubeGrid) continue;
+        bool ok = box.Count == 1;
+        foreach (var o in box)
+        {
+            if (ok) break;
+            if (o != w) try { ok = w.GetInventory(0).IsConnectedTo(o.GetInventory(0)); } catch { ok = true; }
+        }
+        if (ok) h = w;
+    }
+    if (h == null) foreach (var w in box) if (h == null || w.EntityId < h.EntityId) h = w;
     long hid = h == null ? 0 : h.EntityId;
     if (hid != homeId) { homeId = hid; reachCache.Clear(); }
     home = h;
