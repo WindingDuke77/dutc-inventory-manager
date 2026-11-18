@@ -16,7 +16,22 @@ Dictionary<string,string> knownBp = new Dictionary<string,string>
     { "AQD_Comp_Concrete", "AQD_BP_StoneIngot_To_Concrete" },
     { "DeuteriumContainmentUnit", "IceToDeuterium" },             // Star Trek Mod Pack (thanks Jasper + aantono)
     { "AntideuteriumContainmentUnit", "IceToAntideuterium" },
-    { "ATLASAmmoMagazine", "40mmATLASBP" }                        // Aryx Weapon Enterprises (thanks The Burger Buster)
+    { "ATLASAmmoMagazine", "40mmATLASBP" },                       // Aryx Weapon Enterprises (thanks The Burger Buster)
+    // vanilla names the search can't reach or gets wrong: the Torpedo_* rows found plain Torpedo,
+    // ElitePistolItem its magazine (thanks aantono)
+    { "Torpedo_Seeking", "Position0210_Torpedo_Seeking" },
+    { "Torpedo_Heavy", "Position0220_Torpedo_Heavy" },
+    { "Torpedo_Piercing", "Position0230_Torpedo_Piercing" },
+    { "Missile200mmHoming", "Position0101_Missile200mmHoming" },
+    { "AntiPersonnelTurret_Mag", "Position0075_AntiPersonnelTurretMagazine" },
+    { "FlareBox", "Position0071_FlareBox" },
+    { "FlareClip", "Position0000_FlareGunMagazine" },
+    { "FlareGunItem", "Position0000_FlareGun" },
+    { "ElitePistolItem", "Position0030_EliteAutoPistol" },
+    { "FireworksBoxGreen", "Position0061_FireworksBoxGreen" },
+    { "FireworksBoxRed", "Position0062_FireworksBoxRed" },
+    { "FireworksBoxYellow", "Position0063_FireworksBoxYellow" },
+    { "FireworksBoxPink", "Position0064_FireworksBoxPink" }
 };
 // blueprints seen queued by hand in any assembler, newest first - the script
 // adopts them for matching items, Isy style (thanks The Burger Buster)
@@ -186,7 +201,7 @@ bool Craft()
         entries.Add(new[] { anm, "0", "", "" });
         newLines.Append(anm + "=0\n");
     }
-    foreach (var v in vanillaEnsure)
+    foreach (var v in vanillaEnsure.Concat(knownBp.Keys))
     {
         if (seen.Contains(v) || quickMiss.Contains(v)) continue;
         MyDefinitionId bp1;
@@ -610,14 +625,14 @@ int BpState(string name, out MyDefinitionId bp, bool deep)
     if (bpCache.TryGetValue(name, out cached)) { bp = cached; return 1; }
     if (noBp.Contains(name)) return -1;
     if (assemblers.Count == 0) return 0;
-    string mapped;
-    if (knownBp.TryGetValue(name, out mapped) && TestBp(mapped, out bp)) { bpCache[name] = bp; return 1; }
     // "Type/Sub" names target a specific item type: SeedItem/Grain=10 extracts seed
     // packs while plain Grain=100 grows the crop (thanks aantono)
     string core = name;
     string typePrefix = "";
     int slash = name.IndexOf('/');
     if (slash > 0) { typePrefix = name.Substring(0, slash); core = name.Substring(slash + 1); }
+    string mapped;
+    if (knownBp.TryGetValue(core, out mapped) && TestBp(mapped, out bp)) { bpCache[name] = bp; return 1; }
     bool isSeed = typePrefix == "SeedItem" || typePrefix == "Seed" || typePrefix == "Seeds";
     string baseN = core.Replace("Item", "");
     int lastUnder = baseN.LastIndexOf('_');

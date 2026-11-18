@@ -90,6 +90,8 @@ public Program()
                 if (MyDefinitionId.TryParse(e.Substring(gt + 1), out id)) bpCache[e.Substring(0, gt)] = id;
             }
             foreach (var nm in parts[1].Split(';')) if (nm.Length > 0) noBp.Add(nm);
+            // knownBp beats anything guessed by an older version
+            foreach (var k in knownBp.Keys) { bpCache.Remove(k); noBp.Remove(k); }
         }
     }
     Runtime.UpdateFrequency = UpdateFrequency.Update10;
@@ -139,8 +141,12 @@ public void Main(string arg)
     }
     catch (Exception e)
     {
-        lastError = stepNames[step] + ": " + e.Message;
+        // a block removed since the last scan has no inventory left: rescan, it's no error (thanks 0micron)
+        if (step != 0 && (allInv.Exists(b => b.Closed) || specials.Exists(b => b.Closed))) { step = 0; scanPhase = 0; countPos = countPass = 0; return; }
+        lastError = stepNames[step] + (step == 3 && sortIdx < allInv.Count ? " at " + allInv[sortIdx].CustomName : "") + ": " + e.Message;
         Warn("Script error in step " + stepNames[step]);
+        // one bad block must not stop everything sorted after it
+        if (step == 3) sortIdx++;
         step = (step + 1) % 13;
     }
 }
