@@ -36,7 +36,7 @@ Inventory Manager setups and safe alongside Nanobot Build & Repair.
 | `src/05_machines.cs` | Refineries, ice, uranium, turrets, assembler feeding, cleanup |
 | `src/06_screens.cs` | Sprite LCD rendering |
 | `src/07_helpers.cs` | Shared helpers (transfer engine, caches, classification) |
-| `build.ps1` | Merges the modules into `DutcInventory_paste.cs` (comment-stripped, config kept) |
+| `build.ps1` | Merges the modules into `DutcInventory_paste.cs` (minified, config kept readable) |
 | `build.bat` | Double-click wrapper for `build.ps1` |
 | `Description.bbcode.txt` | Master copy of the Steam Workshop description |
 
@@ -51,7 +51,7 @@ on the Workshop.
 
 Run `build.bat` (or `powershell -ExecutionPolicy Bypass -File build.ps1`).
 
-Merges `src/*.cs` in filename order, strips comments outside the config module,
+Merges `src/*.cs` in filename order, minifies everything outside the config module,
 checks the 100k character PB limit and brace balance, writes
 `DutcInventory_paste.cs` (git-ignored) and copies the result to your clipboard —
 paste that into the Programmable Block. Prefer not to build? The

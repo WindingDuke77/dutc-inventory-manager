@@ -68,9 +68,13 @@ bool CanMove(IMyInventory src, long srcId, IMyInventory dst, long dstId, MyItemT
 {
     long key = srcId * 397 ^ dstId;
     bool ok;
-    if (convCache.TryGetValue(key, out ok)) return ok;
+    // a "yes" holds for the pair, a "no" only for that item: small conveyor tubes pass ore and
+    // small parts but not steel plates, and one refused plate used to block everything else
+    if (convCache.TryGetValue(key, out ok) && ok) return true;
+    long no = key * 31 + t.GetHashCode();
+    if (convCache.TryGetValue(no, out ok)) return ok;
     try { ok = src.CanTransferItemTo(dst, t); } catch { ok = false; }
-    convCache[key] = ok;
+    convCache[ok ? key : no] = ok;
     return ok;
 }
 

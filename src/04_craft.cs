@@ -172,9 +172,8 @@ bool Craft()
                 int sl = bpOv.LastIndexOf('/');
                 if (sl >= 0) bpOv = bpOv.Substring(sl + 1);
             }
-            double want;
-            double.TryParse(System.Text.RegularExpressions.Regex.Match(val, @"\d+").Value, out want);
-            string mods = System.Text.RegularExpressions.Regex.Replace(val, @"[\d\.\s]", "").ToUpper();
+            double want; string mods;
+            ParseQuota(val, out want, out mods);
             if (hideRow) mods += "H";
             if (name == "" || seen.Contains(name)) continue;
             seen.Add(name);
@@ -491,6 +490,15 @@ int DrawCraftPanel(IMyTextSurface s, int index, int start, bool last, float us)
     if (total == 0) f.Add(Txt(assemblers.Count == 0 ? "No usable assembler on this grid" : "No craftable items known yet", off + new Vector2(W * 0.5f, H * 0.45f), 0.7f * sc, assemblers.Count == 0 ? UI_WARNC : UI_DIM));
     f.Dispose();
     return last ? Math.Max(0, total - start) : maxRows;
+}
+
+// "1000", "1000D", "500 P" -> wanted amount + modifier letters. Thousands separators go
+// first: "10,000D" used to read as 10 and, with D, melted everything above ten
+void ParseQuota(string val, out double want, out string mods)
+{
+    val = System.Text.RegularExpressions.Regex.Replace(val, @"(?<=\d)[.,\s](?=\d{3}(\D|$))", "");
+    double.TryParse(System.Text.RegularExpressions.Regex.Match(val, @"\d+").Value, out want);
+    mods = System.Text.RegularExpressions.Regex.Replace(val, @"[\d\.,\s]", "").ToUpper();
 }
 
 // total amount of bp sitting in disassembly-mode queues

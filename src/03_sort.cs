@@ -177,6 +177,8 @@ bool SpecialFill()
             if (val.Contains("all")) { want = 1000000000; mode = "a"; }
             else
             {
+                // "1,000" means a thousand, not one (a dot can be a decimal here, so only commas go)
+                val = System.Text.RegularExpressions.Regex.Replace(val, @"(?<=\d),(?=\d{3}(\D|$))", "");
                 if (!double.TryParse(System.Text.RegularExpressions.Regex.Match(val, @"\d+\.?\d*").Value, out want)) continue;
                 if (val.Contains("m")) mode = "m";
                 else if (val.Contains("l")) mode = "l";
