@@ -1,5 +1,5 @@
 // ========================================
-//         DUTC INVENTORY  v2.5.4
+//         DUTC INVENTORY  v2.6.0
 // ========================================
 // One script runs the base: sorting, autocrafting, refineries, ice, uranium,
 // turret ammo, bottles and sprite LCDs. Drop-in for Isy's IIM setups (same

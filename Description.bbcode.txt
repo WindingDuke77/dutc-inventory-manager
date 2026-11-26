@@ -62,7 +62,7 @@ A wrong BP: name shows [b]BP?[/b] on the screen.
 Quotas count the BASE stock, connector-joined stations included. Docked ships don't count (they leave). Turrets and Specials count by default (switches: craftCountDocked / craftCountGuns / craftCountSpecials).
 Refinery quotas: [b]Ingot/Iron=50000[/b] keeps 50k iron ingots - ore feeding stops at the target and resumes below it, and that ore drops to the back of the queue.
 Deep blueprint search needs no setup: it runs for any item with a wanted amount, and what it finds is remembered across recompiles and world reloads.
-Multiple screens? Name them [b]Autocrafting 1[/b], [b]Autocrafting 2[/b]... - the list flows in that order.
+More screens: [b]Autocrafting 1[/b], [b]Autocrafting 2[/b]... [b]Order=List[/b] keeps your row order, not A-Z.
 
 [h1]Keywords[/h1]
 [list]

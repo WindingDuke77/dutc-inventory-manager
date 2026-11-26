@@ -119,6 +119,7 @@ bool Craft()
         }
     }
     var entries = new List<string[]>();
+    bool listOrder = false;
     var seen = new HashSet<string>();
     // master parses FIRST: its values always win over leftovers on other panels
     var panels = new List<IMyTextPanel>();
@@ -142,6 +143,8 @@ bool Craft()
             if (name.StartsWith("MyObjectBuilder_")) name = name.Substring(16);
             if (name.Equals("UIScale", StringComparison.OrdinalIgnoreCase)) continue;
             string val = l.Substring(eq + 1).Trim();
+            // Order=List: rows show in the order they are written, not A-Z
+            if (name.Equals("Order", StringComparison.OrdinalIgnoreCase)) { listOrder = val.Equals("List", StringComparison.OrdinalIgnoreCase); continue; }
             // refining order without touching the script: OrePriority=Iron,Nickel,...
             // left-out ores keep their default order at the end (thanks bringr32)
             if (name.Equals("OrePriority", StringComparison.OrdinalIgnoreCase))
@@ -213,7 +216,7 @@ bool Craft()
     if (newLines.Length > 0)
         master.CustomData = master.CustomData.TrimEnd('\n') + "\n" + newLines.ToString().TrimEnd('\n');
 
-    entries.Sort((a, z) => a[0].CompareTo(z[0]));
+    if (!listOrder) entries.Sort((a, z) => a[0].CompareTo(z[0]));
 
     craftRows.Clear();
     ingotTarget.Clear();
@@ -366,6 +369,7 @@ void SetupCraftCD(IMyTextPanel master)
     sbcd.Append("# Modifiers after the number:  P = craft first (priority),  I = ignore,  H = hide from the screen\n");
     sbcd.Append("#   D = disassemble the excess above the wanted amount (e.g. SteelPlate=1000D)\n");
     sbcd.Append("# Refinery quota: Ingot/Iron=50000 keeps 50k iron ingots - ore feeding stops at the target, resumes below it.\n");
+    sbcd.Append("# Order=List shows the rows in the order of this list instead of A-Z.\n");
     sbcd.Append("# Modded item stuck on NoBP? Force its blueprint: Name=100 BP:BlueprintSubtype\n");
     sbcd.Append("# Blueprint name unknown? Queue the item once by hand and hover it in the assembler's production queue.\n");
     sbcd.Append("# Exact ITEM name unknown? Run the PB with argument:  items <part of the name>\n");
